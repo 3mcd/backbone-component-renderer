@@ -2,8 +2,8 @@ module.exports = {
 	entry: __dirname + '/src/main.js',
 	output: {
 		path: __dirname + '/dist',
-		filename: 'backbone-presenter.js',
-        library: "backbonePresenter",
+		filename: 'backbone-component-renderer.js',
+        library: "backboneComponentRenderer",
         libraryTarget: "umd"
 	},
 	module: {

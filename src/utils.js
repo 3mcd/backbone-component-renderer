@@ -1,3 +1,5 @@
+const rMap = (a, cb) => a.map(x => Array.isArray(x) ? x.map(cb) : cb(x));
+
 const interleave = (a1, a2) =>
   a1
   .map((v, i) => a2[i] ? [v, a2[i]] : v)
@@ -8,18 +10,24 @@ const isPlaceholder = (node, regex) => {
   return regex.test(node.textContent);
 };
 
-const getPlaceholderId = (node) => {
-	return Number(node.textContent.match(/[\w\.]+/)[0]);
-};
+const getPlaceholderId = (node) => Number(node.textContent.match(/[\w\.]+/)[0]);
 
-const swap = (el, ref) => ref.parentNode.replaceChild(el, ref);
+const swap = (els, ref) => {
+  const parent = ref.parentNode;
+  if (Array.isArray(els)) {
+    swap(els[0], ref);
+    els.slice(1).forEach((el, i) => parent.insertBefore(el, els[i].nextSibling));
+  } else {
+    parent.replaceChild(els, ref);
+  }
+};
 const empty = (parent) => {
   while (parent.firstChild) parent.removeChild(parent.firstChild);
 };
 const moveChildren = (from, to) => {
-    while (from.childNodes.length > 0) {
-      to.appendChild(from.childNodes[0]);
-    }
+  while (from.childNodes.length > 0) {
+    to.appendChild(from.childNodes[0]);
+  }
 }
 
 const findTextNodes = (el) => {
@@ -28,13 +36,16 @@ const findTextNodes = (el) => {
   return a;
 };
 
-const substitutePlaceholders = (orderedEls, html, regex) => {
+const tempElement = (html) => {
+  const el = document.createElement('span');
+  el.innerHTML = html || '';
+  return el;
+};
+
+const injectElements = (el, elements, regex) => {
   // Create temp element so we aren't doing DOM manipulation directly in the document.
-  const temp = document.createElement('div');
   const placeholders = [];
-  // Parse HTML text as DOM.
-  temp.innerHTML = html;
-  const groups = findTextNodes(temp).filter(p => isPlaceholder(p, regex));
+  const groups = findTextNodes(el).filter(p => isPlaceholder(p, regex));
   groups.forEach((group) => {
     // Find sub-placeholders.
     const matches = group.textContent.match(regex);
@@ -43,31 +54,40 @@ const substitutePlaceholders = (orderedEls, html, regex) => {
     matches.forEach((placeholderText, i) => {
       var placeholder;
       var rest;
-      // split the text node at the beginning and end of the placeholder.
-      placeholder = group.splitText(group.textContent.indexOf(placeholderText));
-      rest = placeholder.splitText(placeholder.textContent.indexOf(placeholderText) + placeholderText.length);
+
+      if (i === 0) {
+        rest = group.splitText(group.textContent.indexOf(placeholderText) + placeholderText.length);
+        placeholder = group;
+      } else {
+        placeholder = group.splitText(group.textContent.indexOf(placeholderText));
+        if (i !== matches.length) {
+          rest = placeholder.splitText(placeholder.textContent.indexOf(placeholderText) + placeholderText.length);
+        }
+      }
       // Grab the newly isolated placeholder.
       placeholders.push(placeholder);
       // Keep moving.
       group = rest;
     });
   });
-  // Swap each placeholder with its corresponding element in the orderedEls Array.
+  // Swap each placeholder with its corresponding element in the(elements Array.
   placeholders.forEach((placeholder) => {
     const id = getPlaceholderId(placeholder);
-    swap(orderedEls[id - 1], placeholder);
+    swap(elements[id - 1], placeholder);
   });
-  // Return the temporary node.
-  return temp;
+  // Return the node.
+  return el;
 };
 
 export {
-	interleave,
-	isPlaceholder,
-	getPlaceholderId,
-	swap,
   empty,
+  findTextNodes,
+  getPlaceholderId,
+  injectElements,
+  interleave,
+  isPlaceholder,
   moveChildren,
-	findTextNodes,
-	substitutePlaceholders
+  rMap,
+  swap,
+  tempElement,
 };

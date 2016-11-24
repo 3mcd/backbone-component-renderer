@@ -1,11 +1,11 @@
-const { presenter, configurePresenter } = backbonePresenter;
+const { componentRenderer, chunk, configureRenderer } = backboneComponentRenderer;
 
-configurePresenter({ Backbone: window.Backbone });
+configureRenderer({ backbone: window.Backbone });
 
 const View = Backbone.View.extend({
   initialize() {
-    this.presenter = presenter(this);
-    _.bindAll(this, 'presenter');
+    this.renderer = componentRenderer(this);
+    _.bindAll(this, 'renderer');
   },
   remove() {
     Backbone.View.prototype.remove.call(this);
@@ -13,90 +13,100 @@ const View = Backbone.View.extend({
 });
 
 const Link = View.extend({
-    tagName: 'a',
-    initialize(options) {
-      const { url, text } = options;
-      this.url = url;
-      this.text = text;
-      View.prototype.initialize.call(this);
-    },
-    render() {
-      const { url, text } = this;
-      this.el.href = url;
-      this.presenter(text);
-    }
-});
-
-const Nav = View.extend({
-	initialize: function (options) {
-		this.links = options.links;
-		View.prototype.initialize.call(this);
-	},
-  render() {
-    const { presenter, links } = this;
-    this.presenter(links.map(l => new Link(l)));
-  }
-});
-
-const Home = View.extend({
-  className: 'Home',
-  render() {
-    this.presenter`
-      <h1>Hey.</h1>
-      ${[
-          [
-            [[new Clock]],
-            'bananas',
-            '<br />',
-            123,
-            '<br />',
-            new Clock
-          ],
-          '<br />',
-          '<br />',
-          document.createElement('input')
-        ]}
-      <p>I like exotic meats.</p>
-    `;
-  }
-});
-
-const Clock = View.extend({
-  tagName: 'date',
+  tagName: 'a',
   initialize(options) {
-    _.bindAll(this, 'render');
-    this.interval = setInterval(this.render, 1000);
+    this.url = options.url;
+    this.text = options.text;
     View.prototype.initialize.call(this);
   },
   render() {
-    this.presenter(new Date());
+    const { url, text } = this;
+    this.el.href = url;
+    // Render any value directly:
+    this.renderer(text);
   },
   remove() {
-    clearInterval(this.interval);
+    console.log('Child view removed.');
     View.prototype.remove.call(this);
   }
 });
 
-const App = View.extend({
-	className: 'App',
-	links: [
+const Nav = View.extend({
+  tagName: 'nav',
+  links: [
     { url: '#/home', text: 'Home' },
     { url: '#/about', text: 'About' }
   ],
   render() {
-  	const { presenter, links } = this;
-    presenter`
-      <header>
-        ${new Nav({ links })}
-      </header>
-      <main>
-      	${new Home}
-      </main>
+    // Embed iterables that can contain any value (chunk in this example):
+    this.renderer`
+      <ul>${ this.links.map(l => chunk`<li>${new Link(l)}</li>`) }</ul>
     `;
   }
 });
 
-const app = new App();
+const UserInfo = View.extend({
+  className: 'UserInfo',
+  render() {
+    const { name, age } = this.model.toJSON();
+    this.renderer`
+      <dl>
+        <dt>Name</dt>
+        <dd>${name}</dd>
+        <dt>Age</dt>
+        <dd>${age}</dd>
+      </dl>
+    `;
+  }
+});
+
+const Header = View.extend({
+  tagName: 'header',
+  render() {
+    const { links } = this;
+    this.renderer`
+      ${new Nav()}
+    `;
+  }
+});
+
+const Footer = View.extend({
+  tagName: 'footer',
+  render() {
+    const { links } = this;
+    this.renderer`
+      ${new Nav}
+      <p>Have a nice day.</p>
+    `;
+  }
+});
+
+const App = View.extend({
+  className: 'App',
+  render() {
+    const { links, collection } = this;
+    // Views that render multiple children:
+    this.renderer`
+      ${new Header}
+      <main>
+        <h2>Backbone Component Renderer</h2>
+        <p>Renderer is a really bad word, isn't it?</p>
+        ${collection.map(model => new UserInfo({ model }))}
+      </main>
+      ${new Footer}
+    `;
+  }
+});
+
+const users = new Backbone.Collection([
+  { name: 'Walt', age: 50 },
+  { name: 'Hank', age: 43 },
+  { name: 'Jessie', age: 25 }
+]);
+
+const app = new App({ collection: users });
+
 app.render();
 
 document.body.appendChild(app.el);
+window.app = app;
