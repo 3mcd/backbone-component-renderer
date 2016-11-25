@@ -55,11 +55,13 @@ describe('API', () => {
     var app;
     var children;
     var nestedView;
+    var descendants;
 
     beforeEach(() => {
       app = new Backbone.View();
       children = [new Backbone.View(), new Backbone.View()];
       nestedView = new Backbone.View();
+      descendants = [...children, nestedView];
       // render() spies
       addSpy(nestedView, 'render');
       children.forEach((c, i) => addSpy(c, 'render'));
@@ -71,20 +73,32 @@ describe('API', () => {
 
     const tests = {
       'generates and injects elements generated from template into Backbone view': (tag) => {
-        tag ? componentRenderer(app)([chunk`<div>${children}</div>`]) : componentRenderer(app)`${chunk`<div>${children}</div>`}`;
+        if (tag) {
+          componentRenderer(app)(chunk`<div>${children}</div>`);
+        } else {
+          componentRenderer(app)`<div>${children}</div>`;
+        }
         expect(app.el.children[0].children[0]).to.equal(children[0].el);
         expect(app.el.children[0].children[1]).to.equal(children[1].el);
       },
       'calls the render method of all descendant Backbone views': (tag) => {
-        tag ? componentRenderer(app)(children) : componentRenderer(app)`${children}`;
-        children.forEach(c => expect(c.render.called).to.be.true);
-        expect(nestedView.render.called).to.be.true;
+        if (tag) {
+          componentRenderer(app)(children);
+        } else {
+          componentRenderer(app)`${children}`;
+        }
+        descendants.forEach(c => expect(c.render.called).to.be.true);
       },
       'calls the remove method of all descendant Backbone views upon subsequent executions': (tag) => {
-        componentRenderer(app)`${children}`;
-        tag ? componentRenderer(app)(children) : componentRenderer(app)`${children}`;
-        children.forEach(c => expect(c.remove.called).to.be.true);
-        expect(nestedView.remove.called).to.be.true;
+        // Initial render:
+        componentRenderer(app)(children);
+        // Re-render:
+        if (tag) {
+          componentRenderer(app)(children);
+        } else {
+          componentRenderer(app)`${children}`;
+        }
+        descendants.forEach(c => expect(c.remove.called).to.be.true);
       }
     };
     describe('as a tag', () => runTestsWithMode(tests, true));
