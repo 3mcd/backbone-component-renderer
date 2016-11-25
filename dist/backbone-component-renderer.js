@@ -124,33 +124,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return (0, _utils.flatten)((0, _utils.interleave)(segments, expressions).map(removePlaceholders));
 	};
 
-	var _chunk = function _chunk() {
-	  return function chunk(segments) {
-	    var i = 0;
-	    var html = '';
-	    var children = [];
-	    var handleComponent = function handleComponent(c) {
-	      if (isComponent(c)) {
-	        children.push(c);
-	        c = (0, _const.PLACEHOLDER_TEMPLATE)(i++);
-	      }
-	      html += c;
-	    };
-	    if (!isArray(segments)) {
-	      handleComponent(segments);
-	    } else {
-	      for (var _len = arguments.length, expressions = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-	        expressions[_key - 1] = arguments[_key];
-	      }
-
-	      normalizeSegments(segments, expressions).forEach(handleComponent);
-	    }
-	    var c = { children: children, html: html };
-	    chunks.add(c);
-	    return c;
-	  };
-	};
-
 	var renderBackboneViews = function renderBackboneViews(c) {
 	  if (isArray(c)) {
 	    c.forEach(renderBackboneViews);
@@ -188,19 +161,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	var makeTagFn = function makeTagFn(view) {
-	  return function componentRendererTagFn(segments) {
-	    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-	      expressions[_key2 - 1] = arguments[_key2];
+	  return function renderer(segments) {
+	    for (var _len = arguments.length, expressions = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+	      expressions[_key - 1] = arguments[_key];
 	    }
 
-	    var chunk = isChunk(segments) ? segments : _chunk().apply(undefined, arguments);
+	    var ch = isChunk(segments) ? segments : chunk.apply(undefined, arguments);
 	    // Clean up all of the Backbone view's children.
-	    teardown(view, chunk.children);
+	    teardown(view, ch.children);
 	    // Recursively render all Backbone Views in chunk.
-	    renderBackboneViews(chunk);
+	    renderBackboneViews(ch);
 	    // Render the chunk to the view's element.
-	    renderChunkToElement(chunk, view.el);
-	    return chunk;
+	    renderChunkToElement(ch, view.el);
+	    return ch;
 	  };
 	};
 
@@ -208,8 +181,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * Public API
 	 */
 
-	var chunk = function chunk() {
-	  return _chunk().apply(undefined, arguments);
+	var chunk = function chunk(segments) {
+	  var i = 0;
+	  var html = '';
+	  var children = [];
+	  var handleComponent = function handleComponent(c) {
+	    if (isComponent(c)) {
+	      children.push(c);
+	      c = (0, _const.PLACEHOLDER_TEMPLATE)(i++);
+	    }
+	    html += c;
+	  };
+	  if (!isArray(segments)) {
+	    handleComponent(segments);
+	  } else {
+	    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+	      expressions[_key2 - 1] = arguments[_key2];
+	    }
+
+	    normalizeSegments(segments, expressions).forEach(handleComponent);
+	  }
+	  var ch = { children: children, html: html };
+	  chunks.add(ch);
+	  return ch;
 	};
 
 	// Can be used as a template tag or a function

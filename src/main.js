@@ -55,27 +55,6 @@ const cleanup = (child) => {
 
 const normalizeSegments = (segments, expressions) => flatten(interleave(segments, expressions).map(removePlaceholders));
 
-const _chunk = () => function chunk(segments, ...expressions) {
-  var i = 0;
-  var html = '';
-  const children = [];
-  const handleComponent = c => {
-    if (isComponent(c)) {
-      children.push(c);
-      c = PLACEHOLDER_TEMPLATE(i++);
-    }
-    html += c;
-  };
-  if (!isArray(segments)) {
-    handleComponent(segments);
-  } else {
-    normalizeSegments(segments, expressions).forEach(handleComponent);
-  }
-  const c = { children, html };
-  chunks.add(c);
-  return c;
-};
-
 const renderBackboneViews = (c) => {
   if (isArray(c)) {
     c.forEach(renderBackboneViews);
@@ -110,23 +89,40 @@ const substitute = (children, html, PLACEHOLDER_REGEX) => {
   return temp;
 };
 
-const makeTagFn = (view) => function componentRendererTagFn(segments, ...expressions) {
-  const chunk = isChunk(segments) ? segments : _chunk()(...arguments);
+const makeTagFn = (view) => function renderer(segments, ...expressions) {
+  const ch = isChunk(segments) ? segments : chunk(...arguments);
   // Clean up all of the Backbone view's children.
-  teardown(view, chunk.children);
+  teardown(view, ch.children);
   // Recursively render all Backbone Views in chunk.
-  renderBackboneViews(chunk);
+  renderBackboneViews(ch);
   // Render the chunk to the view's element.
-  renderChunkToElement(chunk, view.el);
-  return chunk;
+  renderChunkToElement(ch, view.el);
+  return ch;
 };
 
 /**
  * Public API
  */
 
-const chunk = function chunk(...args) {
-  return _chunk()(...args);
+const chunk = function chunk(segments, ...expressions) {
+  var i = 0;
+  var html = '';
+  const children = [];
+  const handleComponent = c => {
+    if (isComponent(c)) {
+      children.push(c);
+      c = PLACEHOLDER_TEMPLATE(i++);
+    }
+    html += c;
+  };
+  if (!isArray(segments)) {
+    handleComponent(segments);
+  } else {
+    normalizeSegments(segments, expressions).forEach(handleComponent);
+  }
+  const ch = { children, html };
+  chunks.add(ch);
+  return ch;
 };
 
 // Can be used as a template tag or a function
