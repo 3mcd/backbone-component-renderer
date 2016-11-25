@@ -33,7 +33,7 @@ render() {
 	var links = this.links.map(
 		link => chunk`<li>${new Link({ link })}</li>`
 	);
-	this.componentRenderer`
+	this.renderer`
 		${new Avatar()}
 		<ul>${links}</ul>
 	`;
@@ -42,11 +42,11 @@ render() {
 
 ### Why?
 
-Often times Backbone render functions are full of variable declarations, child view creation, rendering, and appending. In addition, you'll need to create placeholder elements if you want to append child views to specific parts of a layout, adding additional complexity to your HTML structure.
+Often times Backbone render functions are full of child view instantiation and associated rendering and appending. In addition, you'll need to create placeholder elements if you want to append child views to specific parts of a layout, adding additional complexity to your application's HTML structure.
 
-`backbone-component-renderer` allows you to write nested Backbone View structures in a more declarative way, without placeholder elements or verbose `render()` calls.
+`backbone-component-renderer` allows you to write nested Backbone view structures in a more declarative way, without placeholder elements or verbose `render()` calls.
 
-Best of all, there is no inheritance or other over-arching pattern you have to subscribe to. The library exports a function that is used in conjunction with ES6 template literals to set up child content, and it should fit in with any of your pre-existing views.
+There is no inheritance or other overarching pattern you have to subscribe to because the library is mainly comprised of a [template literal tag function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals) to build view hierarchies. You can implement it incrementally in larger projects, and it has a very small file size.
 
 ### Setup
 
@@ -74,14 +74,14 @@ configureRenderer({ backbone: Backbone });
 
 ### Usage
 
-The main function you need to get up and running is `componentRenderer`. This function takes a `Backbone.View` instance and returns a new function for use in tagging template literals.
+The main function you need to get up and running is `componentRenderer`. This function takes a `Backbone.View` instance and returns a new  function for use in [tagging template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals).
 
 e.g. Give all views in your application a component renderer:
 
 ```js
 const BaseView = View.extend({
 	initialize() {
-		this.componentRenderer = componentRenderer(this);
+		this.renderer = componentRenderer(this);
 	}
 })
 ```
@@ -94,36 +94,43 @@ render() {
 }
 ```
 
-You can also call the tagging function as a regular function, and pass it strings, elements, Views, and even chunks (discussed below):
+You can also call the tag function (reffered to as `renderer` for the remainder of the readme) as a regular function, and pass it strings and other primitives, DOM elements, `Backbone.View` instances, and even chunks (discussed below):
 
 ```js
-this.componentRenderer(new MenuItem());
+this.renderer(new MenuItem());
 ```
 
-Backbone View instances passed into the `componentRenderer` will be rendered immediately. Their elements will be inserted into the position of the original expression as soon as the template is compiled.
+Backbone views passed into  `renderer` will be rendered immediately. Their elements will be inserted into the position of the original expression as soon as the template is compiled.
 
 #### Chunks
 
-Imagine that you have a collection of people models. For each person, you want to create a list item with a `PersonItem` view inside. How would you accomplish that using the component renderer? Here are a couple of incorrect solutions:
+Imagine that you have a collection of models representing people. For each person, you want to create a list item with a `PersonItem` view inside. How would you accomplish that using `renderer`?
+
+This problem is easy to fix with JSX because we aren't working with strings:
 
 ```js
-`<li>${people}</li>` // --> <li><div/><div/>...</li>
-`${people.map(v => '<li>' + v + '</li>')}` // --> <li>[object Object]</li><li>[object Object]...
+{people.map(p => <li><PersonItem ... /></li>)}
 ```
 
-The library provides another template literal tagging function called `chunk` that will create a sub-template that you can then embed in a call to `componentRenderer`, or even other chunks.
+If you tried to do something like that with `backbone-component-renderer`, you'd get a bug:
+
+```js
+`${people.map(v => '<li>' + new PersonItem(...) + '</li>')}` // --> <li>[object Object]</li><li>[object Object]...
+```
+
+In order to solve this problem, the library provides another template literal tagging function called `chunk` that will create a sub-template. You can then embed the result in a call to `renderer`, or even other chunks.
 
 ```js
 ${people.map(v => chunk`<li>${v}</li>`)}
 ```
 
-`chunk` can get kind of ugly in complex templates and is best hidden behind helper functions. Here is an example `wrap` function that takes a Backbone View and a tag name. The function returns a chunk with the view surrounded by the specified tag:
+`chunk` can get kind of ugly in more complex templates, so it's is best hidden behind helper functions. Here's an example of a `wrap` function that takes a Backbone view and a tag name. The function returns a chunk with the view surrounded by the specified element:
 
 ```js
 const wrap = (v, tag) => chunk`<${tag}>${v}</${tag}>`;
 const li = (v) => wrap(v, 'li');
 ...
-componentRenderer`
+renderer`
 	<h3>Employees</h3>
 	<ul>${people.map(li)}></ul>
 `;
@@ -131,11 +138,12 @@ componentRenderer`
 
 #### Accepted Types
 
-`componentRenderer` handles primitives, `Backbone.View` instances, `Node` instances, chunks, and `Array` instances that can contain of all aformentioned values.
+`renderer` handles primitives, `Backbone.View` instances, `Node` instances, chunks, and `Array` instances that can contain of all aformentioned values.
 
 ```js
 render() {
-	this.componentRenderer`
+	this.renderer`
+		${chunk`whaaat?!`}
 		Normal text...<br />
 		${[[[[['Really'], 'Dumb']]]]}<br />
 		${19208312}<br />
@@ -146,4 +154,4 @@ render() {
 
 ### Performance
 
-The component renderer will manage any child views it creates internally. If a view is re-rendered using the `componentRenderer` function, the `remove` function of all of that view's children will be called automatically. This also includes any Backbone Views that were created using the `chunk` function.
+`backbone-component-renderer` will manage any child views it creates internally. If a view is re-rendered using `renderer`, the `remove` function of all of that view's children will be called automatically. This behavior also applies to any Backbone views that were created using the `chunk` function.
