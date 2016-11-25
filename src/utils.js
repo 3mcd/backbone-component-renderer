@@ -43,14 +43,13 @@ const tempElement = (html) => {
 };
 
 const injectElements = (el, elements, regex) => {
-  // Create temp element so we aren't doing DOM manipulation directly in the document.
   const placeholders = [];
+  // Find placeholder groups. e.g. <% 1 %><% 2 %>
   const groups = findTextNodes(el).filter(p => matches(p, regex));
   groups.forEach((group) => {
-    // Find sub-placeholders.
+    // Find sub-placeholders. e.g. <% 2 %>
     const matches = group.textContent.match(regex);
-    const finalMatch = matches[matches.length - 1];
-    // For each sub-placeholder,
+    // For each sub-placeholder
     matches.forEach((placeholderText, i) => {
       var placeholder;
       var rest;
@@ -64,18 +63,18 @@ const injectElements = (el, elements, regex) => {
           rest = placeholder.splitText(placeholder.textContent.indexOf(placeholderText) + placeholderText.length);
         }
       }
-      // Grab the newly isolated placeholder.
+      // Grab the newly isolated placeholder
       placeholders.push(placeholder);
-      // Keep moving.
+      // Keep moving
       group = rest;
     });
   });
-  // Swap each placeholder with its corresponding element in the(elements Array.
+  // Swap each placeholder with its corresponding element in the(elements Array
   placeholders.forEach((placeholder) => {
-    const id = getPlaceholderId(placeholder);
-    swap(elements[id - 1], placeholder);
+    const pos = getPlaceholderId(placeholder) - 1;
+    swap(elements[pos], placeholder);
   });
-  // Return the node.
+  // Return the node
   return el;
 };
 

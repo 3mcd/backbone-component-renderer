@@ -27,29 +27,30 @@ const childMap = new WeakMap();
 const chunks = new WeakSet();
 const idMap = new WeakMap();
 
-// Convert a component into a string. If the component is a Backbone View or
-// DOM Node, create a placeholder for the element to be replaced with later.
+// Convert a component into a string. // If the component is a Backbone view,
+// render it. If the component is a Backbone view or DOM Node, create a
+// placeholder for the element to be replaced with later
 const parseComponent = (component, context) => {
   if (isArray(component)) {
     return component.map(e => parseComponent(e, context)).join('');
   }
   if (isView(component)) {
-    // Render the Backbone.View instance automatically.
+    // Render the Backbone.View instance automatically
     component.render();
   } else if (!isNode(component) && !chunks.has(component)) {
-    // If the component is anything other than a Node, we just toString it.
+    // If the component is anything other than a Node, we just toString it
     return component;
   }
-  // Generate a placeholder for the view or Node for this render cycle.
+  // Generate a placeholder for the view or Node for this render cycle
   const id = (idMap.get(context) || 0) + 1;
   idMap.set(context, id);
   return PLACEHOLDER_TEMPLATE(id);
 };
 
-// Recursively tear down child views and chunks.
+// Recursively tear down child views and chunks
 const teardown = (context) => {
   const children = childMap.get(context);
-  // Reset id counter for next render.
+  // Reset id counter for next render
   idMap.delete(context);
   if (children) {
     cleanup(children);
@@ -60,9 +61,9 @@ const cleanup = (child) => {
   if (isArray(child)) {
     child.forEach(cleanup);
   } else if (isView(child)) {
-    // Remove the view.
+    // Remove the view
     child.remove();
-    // Ensure we clean up any child views of the view.
+    // Ensure we clean up any child views of the view
     teardown(child);
   } else if (chunks.has(child)) {
     cleanup(child.children);
@@ -122,7 +123,7 @@ const substitute = (children, html, PLACEHOLDER_REGEX) => {
     }
     return child;
   });
-  // Recursively map all Backbone Views to DOM elements.
+  // Recursively map all Backbone Views to DOM elements
   const elements = rMap(chunked, toEl);
   // Build DOM.
   const temp = injectElements(tempElement(html), elements, PLACEHOLDER_REGEX);
@@ -137,9 +138,9 @@ const chunk = function chunk(...args) {
   return _chunk()(...args);
 };
 
-// Can be used as a template tag or a function.
+// Can be used as a template tag or a function
 const componentRenderer = function componentRenderer(view) {
-  // Return the tagging function.
+  // Return the tagging function
   return makeTagFn(view);
 };
 
