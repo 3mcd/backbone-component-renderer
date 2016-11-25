@@ -54,14 +54,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(1);
-	(function webpackMissingModule() { throw new Error("Cannot find module \"'mocha!test/src/main.js'\""); }());
-
-
-/***/ },
-/* 1 */
-/***/ function(module, exports, __webpack_require__) {
-
 	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
@@ -69,7 +61,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.configureRenderer = exports.componentRenderer = exports.chunk = undefined;
 
-	var _renderer = __webpack_require__(2);
+	var _renderer = __webpack_require__(1);
 
 	/**
 	 * Public API
@@ -82,7 +74,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.configureRenderer = _renderer.configureRenderer;
 
 /***/ },
-/* 2 */
+/* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -92,9 +84,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.configureRenderer = exports.makeTagFn = exports.chunk = undefined;
 
-	var _utils = __webpack_require__(3);
+	var _utils = __webpack_require__(2);
 
-	var _const = __webpack_require__(4);
+	var _const = __webpack_require__(3);
 
 	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -242,7 +234,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.configureRenderer = configureRenderer;
 
 /***/ },
-/* 3 */
+/* 2 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -260,12 +252,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return a.concat(x);
 	  }, []);
 	};
+
 	var interleave = function interleave(a1, a2) {
-	  return a1.map(function (v, i) {
-	    return a2[i] ? [v, a2[i]] : v;
-	  }).reduce(function (a, b) {
-	    return a.concat(b);
-	  }, []);
+	  var arr = [];
+	  for (var i = 0, len = Math.max(a1.length, a2.length); i < len; i++) {
+	    if (i < a1.length) {
+	      arr.push(a1[i]);
+	    }
+	    if (i < a2.length) {
+	      arr.push(a2[i]);
+	    }
+	  }
+	  return arr;
 	};
 
 	var matches = function matches(node, regex) {
@@ -364,7 +362,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.tempElement = tempElement;
 
 /***/ },
-/* 4 */
+/* 3 */
 /***/ function(module, exports) {
 
 	"use strict";

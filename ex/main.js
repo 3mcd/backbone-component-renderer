@@ -2,6 +2,9 @@ const { componentRenderer, chunk, configureRenderer } = backboneComponentRendere
 
 configureRenderer({ backbone: window.Backbone });
 
+const factory = (Ctor) => (...args) => create(Ctor, ...args);
+const create = (Ctor, ...args) => new Ctor(...args);
+
 const View = Backbone.View.extend({
   initialize() {
     this.renderer = componentRenderer(this);
@@ -12,7 +15,7 @@ const View = Backbone.View.extend({
   }
 });
 
-const Link = View.extend({
+const Link = factory(View.extend({
   tagName: 'a',
   initialize(options) {
     this.link = options.link;
@@ -28,9 +31,9 @@ const Link = View.extend({
     console.log('Deeply nested child view was removed.');
     View.prototype.remove.call(this);
   }
-});
+}));
 
-const Nav = View.extend({
+const Nav = factory(View.extend({
   tagName: 'nav',
   links: [
     { url: '#/home', text: 'Home' },
@@ -38,14 +41,14 @@ const Nav = View.extend({
   ],
   render() {
     // Embed iterables that can contain any value (chunk in this example):
-    const links = this.links.map(link => chunk`<li>${new Link({ link })}</li>`);
+    const links = this.links.map(link => chunk`<li>${Link({ link })}</li>`);
     this.renderer`
       <ul>${links}</ul>
     `;
   }
-});
+}));
 
-const UserInfo = View.extend({
+const UserInfo = factory(View.extend({
   className: 'UserInfo',
   render() {
     const { name, age } = this.model.toJSON();
@@ -58,45 +61,45 @@ const UserInfo = View.extend({
       </dl>
     `;
   }
-});
+}));
 
-const Header = View.extend({
+const Header = factory(View.extend({
   tagName: 'header',
   render() {
     const { links } = this;
     this.renderer`
-      ${new Nav}
+      ${Nav()}
     `;
   }
-});
+}));
 
-const Footer = View.extend({
+const Footer = factory(View.extend({
   tagName: 'footer',
   render() {
     const { links } = this;
     this.renderer`
-      ${new Nav}
+      ${Nav()}
       <p>Have a nice day.</p>
     `;
   }
-});
+}));
 
-const App = View.extend({
+const App = factory(View.extend({
   className: 'App',
   render() {
     const { links, collection } = this;
     // Views that render multiple children:
     this.renderer`
-      ${new Header}
+      ${Header()}
       <main>
         <h2>Backbone Component Renderer</h2>
         <p>Renderer is a really bad word, isn't it?</p>
-        ${collection.map(model => new UserInfo({ model }))}
+        ${collection.map(model => UserInfo({ model }))}
       </main>
-      ${new Footer}
+      ${Footer()}
     `;
   }
-});
+}));
 
 const users = new Backbone.Collection([
   { name: 'Walt', age: 50 },
@@ -104,7 +107,7 @@ const users = new Backbone.Collection([
   { name: 'Jessie', age: 25 }
 ]);
 
-const app = new App({ collection: users });
+const app = App({ collection: users });
 
 app.render();
 
