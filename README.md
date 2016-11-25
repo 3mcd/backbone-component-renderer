@@ -1,48 +1,6 @@
 ## backbone-component-renderer
 
-This library enables you to turn your complex Backbone render functions from this:
-
-```js
-template() {
-	return `
-		<div class="Header-avatar"></div>
-		<nav>
-			<ul class="Header-links"></ul>
-		</nav>
-	`;
-},
-render() {
-	this.$el.html(this.template());
-	var avatarEl = this.$('.Header-avatar');
-	var linksEl = this.$('.Header-links');
-	var avatar = new Avatar();
-	avatar.render();
-	avatarEl.append(avatar.el);
-	var links = this.links.map(link => new Link({ link }));
-	links.forEach(link => {
-		var li = $('<li/>');
-		li.append(link.el);
-		link.render();
-		linksEl.append(link);
-	});
-}
-```
-
-into this:
-
-```js
-render() {
-	var links = this.links.map(
-		link => chunk`<li>${ new Link({ link }) }</li>`
-	);
-	this.renderer`
-		${new Avatar()}
-		<nav>
-			<ul>${links}</ul>
-		</nav>
-	`;
-}
-```
+![backbone-component-renderer example](https://cloud.githubusercontent.com/assets/6402908/20629647/a9ecc0f4-b2fa-11e6-8712-e7315b23f8f7.png);
 
 ### Why?
 
