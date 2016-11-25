@@ -31,7 +31,7 @@ into this:
 ```js
 render() {
 	var links = this.links.map(
-		link => chunk`<li>${new Link({ link })}</li>`
+		link => li(new Link({ link }))
 	);
 	this.renderer`
 		${new Avatar()}
