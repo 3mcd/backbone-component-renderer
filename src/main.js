@@ -148,8 +148,6 @@ const configureRenderer = function configureRenderer(options) {
   config.backbone = options.backbone || config.backbone;
 };
 
-window.childMap = childMap;
-
 export {
   chunk,
   componentRenderer,
