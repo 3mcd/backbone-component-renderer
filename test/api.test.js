@@ -3,7 +3,7 @@ import Backbone from './backbone.mock';
 import { PLACEHOLDER_TEMPLATE } from '../src/const';
 import { interleave } from '../src/utils';
 import { chunk, componentRenderer, configureRenderer } from '../src/api';
-import sinon from 'sinon/pkg/sinon';
+import sinon from 'sinon';
 
 configureRenderer({ backbone: Backbone });
 

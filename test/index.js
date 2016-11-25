@@ -1,3 +1,4 @@
-var context = require.context('.', true, /.+\.test\.js?$/);
-context.keys().forEach(context);
-module.exports = context;
+// Enable browser globals and DOM manipulation.
+require('jsdom-global')();
+
+require('./api.test.js');
