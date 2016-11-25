@@ -1,6 +1,6 @@
 ## backbone-component-renderer
 
-![backbone-component-renderer example](https://cloud.githubusercontent.com/assets/6402908/20629647/a9ecc0f4-b2fa-11e6-8712-e7315b23f8f7.png);
+![backbone-component-renderer example](https://cloud.githubusercontent.com/assets/6402908/20629647/a9ecc0f4-b2fa-11e6-8712-e7315b23f8f7.png)
 
 ### Why?
 
