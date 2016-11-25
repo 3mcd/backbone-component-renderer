@@ -72,9 +72,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	var toEl = function toEl(c) {
-	  return isView(c) ? c.el : c;
+	  return isBackboneView(c) ? c.el : c;
 	};
-	var isView = function isView(c) {
+	var isChunk = function isChunk(c) {
+	  return chunks.has(c);
+	};
+	var isBackboneView = function isBackboneView(c) {
 	  return c instanceof config.backbone.View;
 	};
 	var isNode = function isNode(c) {
@@ -83,121 +86,90 @@ return /******/ (function(modules) { // webpackBootstrap
 	var isArray = function isArray(c) {
 	  return Array.isArray(c);
 	};
+	var isComponent = function isComponent(c) {
+	  return isBackboneView(c) || isNode(c) || isChunk(c);
+	};
 	var removePlaceholders = function removePlaceholders(c, regex) {
 	  return typeof c === 'string' ? c.replace(_const.PLACEHOLDER_REGEX, '') : c;
 	};
 
-	var childMap = new WeakMap();
 	var chunks = new WeakSet();
-	var idMap = new WeakMap();
 
-	// Convert a component into a string. If the component is a Backbone View or
-	// DOM Node, create a placeholder for the element to be replaced with later.
-	var parseComponent = function parseComponent(component, context) {
-	  if (isArray(component)) {
-	    return component.map(function (e) {
-	      return parseComponent(e, context);
-	    }).join('');
-	  }
-	  if (isView(component)) {
-	    // Render the Backbone.View instance automatically.
-	    component.render();
-	  } else if (!isNode(component) && !chunks.has(component)) {
-	    // If the component is anything other than a Node, we just toString it.
-	    return component;
-	  }
-	  // Generate a placeholder for the view or Node for this render cycle.
-	  var id = (idMap.get(context) || 0) + 1;
-	  idMap.set(context, id);
-	  return (0, _const.PLACEHOLDER_TEMPLATE)(id);
-	};
-
-	// Recursively tear down child views and chunks.
-	var teardown = function teardown(context) {
-	  var children = childMap.get(context);
-	  // Reset id counter for next render.
-	  idMap.delete(context);
-	  if (children) {
-	    cleanup(children);
-	  }
-	};
+	// Recursively tear down child views and chunks
+	var teardown = function () {
+	  var childMap = new WeakMap();
+	  return function (context, nextChildren) {
+	    var children = childMap.get(context);
+	    if (children) {
+	      cleanup(children);
+	    }
+	    childMap.set(context, nextChildren);
+	  };
+	}();
 
 	var cleanup = function cleanup(child) {
 	  if (isArray(child)) {
 	    child.forEach(cleanup);
-	  } else if (isView(child)) {
-	    // Remove the view.
+	  } else if (isBackboneView(child)) {
+	    // Remove the view
 	    child.remove();
-	    // Ensure we clean up any child views of the view.
+	    // Ensure we clean up any child views of the view
 	    teardown(child);
-	  } else if (chunks.has(child)) {
-	    cleanup(child.children);
+	  } else if (isChunk(child)) {
+	    child.children.forEach(cleanup);
 	  }
 	};
 
-	var createPlaceholderTemplate = function createPlaceholderTemplate(components, context) {
-	  return components.map(function (c) {
-	    return parseComponent(c, context);
-	  }).reduce(function (a, c) {
-	    return a + c;
-	  });
-	};
-
-	var getChildren = function getChildren(components) {
-	  return components.reduce(function (a, c) {
-	    if (isArray(c)) {
-	      return a.concat(getChildren(c));
-	    }
-	    if (isView(c) || c instanceof Node || chunks.has(c)) {
-	      a.push(c);
-	    }
-	    return a;
-	  }, []);
+	var normalizeSegments = function normalizeSegments(segments, expressions) {
+	  return (0, _utils.flatten)((0, _utils.interleave)(segments, expressions).map(removePlaceholders));
 	};
 
 	var _chunk = function _chunk() {
-	  var context = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	  return function chunk(segments) {
-	    if (!isArray(segments)) {
-	      segments = [segments];
-	    }
-
-	    for (var _len = arguments.length, expressions = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-	      expressions[_key - 1] = arguments[_key];
-	    }
-
-	    var components = (0, _utils.interleave)(segments, expressions).map(removePlaceholders);
-	    var c = {
-	      children: getChildren(components),
-	      html: createPlaceholderTemplate(components, context)
+	    var i = 0;
+	    var html = '';
+	    var children = [];
+	    var handleComponent = function handleComponent(c) {
+	      if (isComponent(c)) {
+	        children.push(c);
+	        c = (0, _const.PLACEHOLDER_TEMPLATE)(i++);
+	      }
+	      html += c;
 	    };
+	    if (!isArray(segments)) {
+	      handleComponent(segments);
+	    } else {
+	      for (var _len = arguments.length, expressions = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+	        expressions[_key - 1] = arguments[_key];
+	      }
+
+	      normalizeSegments(segments, expressions).forEach(handleComponent);
+	    }
+	    var c = { children: children, html: html };
 	    chunks.add(c);
 	    return c;
 	  };
 	};
 
-	var makeTagFn = function makeTagFn(view) {
-	  return function componentRendererTagFn(segments) {
-	    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-	      expressions[_key2 - 1] = arguments[_key2];
-	    }
-
-	    teardown(view);
-	    var chunk = chunks.has(segments) ? segments : _chunk(view).apply(undefined, arguments);
-	    childMap.set(view, chunk.children);
-	    renderChunk(chunk, view.el);
-	    return chunk;
-	  };
+	var renderBackboneViews = function renderBackboneViews(c) {
+	  if (isArray(c)) {
+	    c.forEach(renderBackboneViews);
+	  } else if (isChunk(c)) {
+	    c.children.forEach(renderBackboneViews);
+	  } else if (isBackboneView(c)) {
+	    c.render();
+	  }
 	};
 
-	var renderChunk = function renderChunk(chunk, el) {
+	var renderChunkToElement = function renderChunkToElement(chunk, el) {
 	  var html = chunk.html,
 	      children = chunk.children;
+	  // Create an element with the child content of the view.
 
 	  var temp = substitute(children, html, _const.PLACEHOLDER_REGEX);
-	  // Empty the view element
+	  // Empty the view element.
 	  (0, _utils.empty)(el);
-	  // Move new elements from temp to view element
+	  // Move new elements from temp to view element.
 	  (0, _utils.moveChildren)(temp, el);
 	};
 
@@ -208,11 +180,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    return child;
 	  });
-	  // Recursively map all Backbone Views to DOM elements.
+	  // Recursively map all Backbone Views to DOM elements
 	  var elements = (0, _utils.rMap)(chunked, toEl);
 	  // Build DOM.
 	  var temp = (0, _utils.injectElements)((0, _utils.tempElement)(html), elements, PLACEHOLDER_REGEX);
 	  return temp;
+	};
+
+	var makeTagFn = function makeTagFn(view) {
+	  return function componentRendererTagFn(segments) {
+	    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+	      expressions[_key2 - 1] = arguments[_key2];
+	    }
+
+	    var chunk = isChunk(segments) ? segments : _chunk().apply(undefined, arguments);
+	    // Clean up all of the Backbone view's children.
+	    teardown(view, chunk.children);
+	    // Recursively render all Backbone Views in chunk.
+	    renderBackboneViews(chunk);
+	    // Render the chunk to the view's element.
+	    renderChunkToElement(chunk, view.el);
+	    return chunk;
+	  };
 	};
 
 	/**
@@ -223,17 +212,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return _chunk().apply(undefined, arguments);
 	};
 
-	// Can be used as a template tag or a function.
+	// Can be used as a template tag or a function
 	var componentRenderer = function componentRenderer(view) {
-	  // Return the tagging function.
+	  // Return the tagging function
 	  return makeTagFn(view);
 	};
 
 	var configureRenderer = function configureRenderer(options) {
 	  config.backbone = options.backbone || config.backbone;
 	};
-
-	window.childMap = childMap;
 
 	exports.chunk = chunk;
 	exports.componentRenderer = componentRenderer;
@@ -253,7 +240,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return Array.isArray(x) ? x.map(cb) : cb(x);
 	  });
 	};
-
+	var flatten = function flatten(a) {
+	  return a.reduce(function (a, x) {
+	    return a.concat(x);
+	  }, []);
+	};
 	var interleave = function interleave(a1, a2) {
 	  return a1.map(function (v, i) {
 	    return a2[i] ? [v, a2[i]] : v;
@@ -262,7 +253,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, []);
 	};
 
-	var isPlaceholder = function isPlaceholder(node, regex) {
+	var matches = function matches(node, regex) {
 	  regex.lastIndex = 0;
 	  return regex.test(node.textContent);
 	};
@@ -309,16 +300,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	var injectElements = function injectElements(el, elements, regex) {
-	  // Create temp element so we aren't doing DOM manipulation directly in the document.
 	  var placeholders = [];
+	  // Find placeholder groups. e.g. <% 1 %><% 2 %>
 	  var groups = findTextNodes(el).filter(function (p) {
-	    return isPlaceholder(p, regex);
+	    return matches(p, regex);
 	  });
 	  groups.forEach(function (group) {
-	    // Find sub-placeholders.
+	    // Find sub-placeholders. e.g. <% 2 %>
 	    var matches = group.textContent.match(regex);
-	    var finalMatch = matches[matches.length - 1];
-	    // For each sub-placeholder,
+	    // For each sub-placeholder
 	    matches.forEach(function (placeholderText, i) {
 	      var placeholder;
 	      var rest;
@@ -332,27 +322,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	          rest = placeholder.splitText(placeholder.textContent.indexOf(placeholderText) + placeholderText.length);
 	        }
 	      }
-	      // Grab the newly isolated placeholder.
+	      // Grab the newly isolated placeholder
 	      placeholders.push(placeholder);
-	      // Keep moving.
+	      // Keep moving
 	      group = rest;
 	    });
 	  });
-	  // Swap each placeholder with its corresponding element in the(elements Array.
+	  // Swap each placeholder with its corresponding element in the(elements Array
 	  placeholders.forEach(function (placeholder) {
-	    var id = getPlaceholderId(placeholder);
-	    swap(elements[id - 1], placeholder);
+	    var pos = getPlaceholderId(placeholder);
+	    swap(elements[pos], placeholder);
 	  });
-	  // Return the node.
+	  // Return the node
 	  return el;
 	};
 
 	exports.empty = empty;
 	exports.findTextNodes = findTextNodes;
+	exports.flatten = flatten;
 	exports.getPlaceholderId = getPlaceholderId;
 	exports.injectElements = injectElements;
 	exports.interleave = interleave;
-	exports.isPlaceholder = isPlaceholder;
 	exports.moveChildren = moveChildren;
 	exports.rMap = rMap;
 	exports.swap = swap;

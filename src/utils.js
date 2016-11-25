@@ -1,5 +1,5 @@
 const rMap = (a, cb) => a.map(x => Array.isArray(x) ? x.map(cb) : cb(x));
-
+const flatten = a => a.reduce((a, x) => a.concat(x), []);
 const interleave = (a1, a2) =>
   a1
   .map((v, i) => a2[i] ? [v, a2[i]] : v)
@@ -71,7 +71,7 @@ const injectElements = (el, elements, regex) => {
   });
   // Swap each placeholder with its corresponding element in the(elements Array
   placeholders.forEach((placeholder) => {
-    const pos = getPlaceholderId(placeholder) - 1;
+    const pos = getPlaceholderId(placeholder);
     swap(elements[pos], placeholder);
   });
   // Return the node
@@ -81,11 +81,12 @@ const injectElements = (el, elements, regex) => {
 export {
   empty,
   findTextNodes,
+  flatten,
   getPlaceholderId,
   injectElements,
   interleave,
   moveChildren,
   rMap,
   swap,
-  tempElement,
+  tempElement
 };
