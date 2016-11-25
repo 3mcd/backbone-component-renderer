@@ -5,7 +5,7 @@ const interleave = (a1, a2) =>
   .map((v, i) => a2[i] ? [v, a2[i]] : v)
   .reduce((a, b) => a.concat(b), []);
 
-const isPlaceholder = (node, regex) => {
+const matches = (node, regex) => {
   regex.lastIndex = 0;
   return regex.test(node.textContent);
 };
@@ -45,7 +45,7 @@ const tempElement = (html) => {
 const injectElements = (el, elements, regex) => {
   // Create temp element so we aren't doing DOM manipulation directly in the document.
   const placeholders = [];
-  const groups = findTextNodes(el).filter(p => isPlaceholder(p, regex));
+  const groups = findTextNodes(el).filter(p => matches(p, regex));
   groups.forEach((group) => {
     // Find sub-placeholders.
     const matches = group.textContent.match(regex);
@@ -85,7 +85,6 @@ export {
   getPlaceholderId,
   injectElements,
   interleave,
-  isPlaceholder,
   moveChildren,
   rMap,
   swap,
