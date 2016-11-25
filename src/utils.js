@@ -1,9 +1,18 @@
 const rMap = (a, cb) => a.map(x => Array.isArray(x) ? x.map(cb) : cb(x));
 const flatten = a => a.reduce((a, x) => a.concat(x), []);
-const interleave = (a1, a2) =>
-  a1
-  .map((v, i) => a2[i] ? [v, a2[i]] : v)
-  .reduce((a, b) => a.concat(b), []);
+
+const interleave = (a1, a2) => {
+  var arr = [];
+  for (var i = 0, len = Math.max(a1.length, a2.length); i < len; i++) {
+    if (i < a1.length) {
+      arr.push(a1[i]);
+    }
+    if (i < a2.length) {
+      arr.push(a2[i]);
+    }
+  }
+  return arr;
+}
 
 const matches = (node, regex) => {
   regex.lastIndex = 0;

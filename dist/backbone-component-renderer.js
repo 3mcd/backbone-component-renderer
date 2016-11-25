@@ -54,6 +54,14 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
+	__webpack_require__(1);
+	(function webpackMissingModule() { throw new Error("Cannot find module \"'mocha!test/src/main.js'\""); }());
+
+
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
 	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
@@ -61,9 +69,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.configureRenderer = exports.componentRenderer = exports.chunk = undefined;
 
-	var _utils = __webpack_require__(1);
+	var _renderer = __webpack_require__(2);
 
-	var _const = __webpack_require__(2);
+	/**
+	 * Public API
+	 */
+
+	var componentRenderer = _renderer.makeTagFn;
+
+	exports.chunk = _renderer.chunk;
+	exports.componentRenderer = componentRenderer;
+	exports.configureRenderer = _renderer.configureRenderer;
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.configureRenderer = exports.makeTagFn = exports.chunk = undefined;
+
+	var _utils = __webpack_require__(3);
+
+	var _const = __webpack_require__(4);
 
 	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -160,27 +191,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return temp;
 	};
 
-	var makeTagFn = function makeTagFn(view) {
-	  return function renderer(segments) {
-	    for (var _len = arguments.length, expressions = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-	      expressions[_key - 1] = arguments[_key];
-	    }
-
-	    var ch = isChunk(segments) ? segments : chunk.apply(undefined, arguments);
-	    // Clean up all of the Backbone view's children.
-	    teardown(view, ch.children);
-	    // Recursively render all Backbone Views in chunk.
-	    renderBackboneViews(ch);
-	    // Render the chunk to the view's element.
-	    renderChunkToElement(ch, view.el);
-	    return ch;
-	  };
-	};
-
-	/**
-	 * Public API
-	 */
-
 	var chunk = function chunk(segments) {
 	  var i = 0;
 	  var html = '';
@@ -195,8 +205,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (!isArray(segments)) {
 	    handleComponent(segments);
 	  } else {
-	    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-	      expressions[_key2 - 1] = arguments[_key2];
+	    for (var _len = arguments.length, expressions = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+	      expressions[_key - 1] = arguments[_key];
 	    }
 
 	    normalizeSegments(segments, expressions).forEach(handleComponent);
@@ -206,10 +216,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ch;
 	};
 
-	// Can be used as a template tag or a function
-	var componentRenderer = function componentRenderer(view) {
-	  // Return the tagging function
-	  return makeTagFn(view);
+	var makeTagFn = function makeTagFn(view) {
+	  return function renderer(segments) {
+	    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+	      expressions[_key2 - 1] = arguments[_key2];
+	    }
+
+	    var ch = isChunk(segments) ? segments : chunk.apply(undefined, arguments);
+	    // Clean up all of the Backbone view's children.
+	    teardown(view, ch.children);
+	    // Recursively render all Backbone Views in chunk.
+	    renderBackboneViews(ch);
+	    // Render the chunk to the view's element.
+	    renderChunkToElement(ch, view.el);
+	    return ch;
+	  };
 	};
 
 	var configureRenderer = function configureRenderer(options) {
@@ -217,11 +238,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.chunk = chunk;
-	exports.componentRenderer = componentRenderer;
+	exports.makeTagFn = makeTagFn;
 	exports.configureRenderer = configureRenderer;
 
 /***/ },
-/* 1 */
+/* 3 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -343,7 +364,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.tempElement = tempElement;
 
 /***/ },
-/* 2 */
+/* 4 */
 /***/ function(module, exports) {
 
 	"use strict";

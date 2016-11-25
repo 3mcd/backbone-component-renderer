@@ -89,21 +89,6 @@ const substitute = (children, html, PLACEHOLDER_REGEX) => {
   return temp;
 };
 
-const makeTagFn = (view) => function renderer(segments, ...expressions) {
-  const ch = isChunk(segments) ? segments : chunk(...arguments);
-  // Clean up all of the Backbone view's children.
-  teardown(view, ch.children);
-  // Recursively render all Backbone Views in chunk.
-  renderBackboneViews(ch);
-  // Render the chunk to the view's element.
-  renderChunkToElement(ch, view.el);
-  return ch;
-};
-
-/**
- * Public API
- */
-
 const chunk = function chunk(segments, ...expressions) {
   var i = 0;
   var html = '';
@@ -125,18 +110,19 @@ const chunk = function chunk(segments, ...expressions) {
   return ch;
 };
 
-// Can be used as a template tag or a function
-const componentRenderer = function componentRenderer(view) {
-  // Return the tagging function
-  return makeTagFn(view);
+const makeTagFn = (view) => function renderer(segments, ...expressions) {
+  const ch = isChunk(segments) ? segments : chunk(...arguments);
+  // Clean up all of the Backbone view's children.
+  teardown(view, ch.children);
+  // Recursively render all Backbone Views in chunk.
+  renderBackboneViews(ch);
+  // Render the chunk to the view's element.
+  renderChunkToElement(ch, view.el);
+  return ch;
 };
 
 const configureRenderer = function configureRenderer(options) {
   config.backbone = options.backbone || config.backbone;
 };
 
-export {
-  chunk,
-  componentRenderer,
-  configureRenderer
-};
+export { chunk, makeTagFn, configureRenderer };
