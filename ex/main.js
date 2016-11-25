@@ -15,18 +15,17 @@ const View = Backbone.View.extend({
 const Link = View.extend({
   tagName: 'a',
   initialize(options) {
-    this.url = options.url;
-    this.text = options.text;
+    this.link = options.link;
     View.prototype.initialize.call(this);
   },
   render() {
-    const { url, text } = this;
+    const { url, text } = this.link;
     this.el.href = url;
     // Render any value directly:
     this.renderer(text);
   },
   remove() {
-    console.log('Child view removed.');
+    console.log('Deeply nested child view was removed.');
     View.prototype.remove.call(this);
   }
 });
@@ -39,8 +38,9 @@ const Nav = View.extend({
   ],
   render() {
     // Embed iterables that can contain any value (chunk in this example):
+    const links = this.links.map(link => chunk`<li>${new Link({ link })}</li>`);
     this.renderer`
-      <ul>${ this.links.map(l => chunk`<li>${new Link(l)}</li>`) }</ul>
+      <ul>${links}</ul>
     `;
   }
 });
@@ -65,7 +65,7 @@ const Header = View.extend({
   render() {
     const { links } = this;
     this.renderer`
-      ${new Nav()}
+      ${new Nav}
     `;
   }
 });

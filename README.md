@@ -1,4 +1,4 @@
-### backbone-component-renderer
+## backbone-component-renderer
 
 This library enables you to turn your complex Backbone render functions from this:
 
@@ -6,7 +6,9 @@ This library enables you to turn your complex Backbone render functions from thi
 template() {
 	return `
 		<div class="Header-avatar"></div>
-		<ul class="Header-links"></ul>
+		<nav>
+			<ul class="Header-links"></ul>
+		</nav>
 	`;
 },
 render() {
@@ -31,11 +33,13 @@ into this:
 ```js
 render() {
 	var links = this.links.map(
-		link => li(new Link({ link }))
+		link => chunk`<li>${ new Link({ link }) }</li>`
 	);
 	this.renderer`
 		${new Avatar()}
-		<ul>${links}</ul>
+		<nav>
+			<ul>${links}</ul>
+		</nav>
 	`;
 }
 ```
@@ -74,9 +78,20 @@ configureRenderer({ backbone: Backbone });
 
 ### Usage
 
-The main function you need to get up and running is `componentRenderer`. This function takes a `Backbone.View` instance and returns a new  function for use in [tagging template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals).
+The main function you need to get up and running is `componentRenderer`. This function takes a `Backbone.View` instance and returns a new function for use in [tagging template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals). The function returned by `componentRenderer` will be referred to as `renderer` for the remainder of the readme.
 
-e.g. Give all views in your application a component renderer:
+The quickest way to start is to create a new `renderer` each time you render a view. You won't lose much in the way of performance, and won't have to modify your inheritance chain:
+
+```js
+render() {
+	componentRenderer(this)`
+		<header>...</header>
+		<main class="Page">${this.activePage}</main>
+	`;
+}
+```
+
+If you prefer, you can add a renderer per view instance to a base view. e.g:
 
 ```js
 const BaseView = View.extend({
@@ -86,21 +101,47 @@ const BaseView = View.extend({
 })
 ```
 
-Of course, inheritance is optional. You could call `componentRenderer` with a view instance every time you render:
+Backbone views passed into `renderer` will be rendered immediately. Their elements will be inserted into the position of the original expression as soon as the template is compiled. In addition, the library will manage any child views it creates internally. If a view is re-rendered, the `remove` function on each descendant view will be called automatically.
+
+**e.g. Nesting components:**
 
 ```js
-render() {
-	componentRenderer(this)`<div class="App">${new ChildView}</div>`;
-}
+const Nutrition = ...
+const FoodItem = BaseView.extend({
+	render() {
+		const { name, description, nutrition } = this.model.toJSON();
+		this.renderer`
+			<h4>${name}</h4>
+			<p>${description}</p>
+			Nutrition: ${new Nutrition({ nutrition })}
+		`;
+	}
+});
+const Menu = BaseView.extend({
+	render() {
+		this.renderer`
+			<h3>Our Menu:</h3>
+			${this.collection.map(model => new FoodItem({ model }))}
+		`;
+	}
+})
 ```
 
-You can also call the tag function (reffered to as `renderer` for the remainder of the readme) as a regular function, and pass it strings and other primitives, DOM elements, `Backbone.View` instances, and even chunks (discussed below):
+You can also call `renderer` as a regular function, and pass it strings and other primitives, DOM elements, `Backbone.View` instances, and even chunks (discussed below):
 
 ```js
-this.renderer(new MenuItem());
+this.renderer(new BattleView());
+this.renderer(['What', new TotallyRadView(), 'whatwhatwhat']);
 ```
 
-Backbone views passed into  `renderer` will be rendered immediately. Their elements will be inserted into the position of the original expression as soon as the template is compiled.
+However, you cannot pass a template literal into the tag form of `renderer` and expect the child content to be set up properly, because the expression is evaluated before being passed in:
+
+```js
+this.renderer(`
+	<ul>${people.map(li)}></ul>
+`);
+// <ul>[object Object], [object Object]...</ul>
+```
 
 #### Chunks
 
@@ -129,7 +170,7 @@ ${people.map(v => chunk`<li>${v}</li>`)}
 ```js
 const wrap = (v, tag) => chunk`<${tag}>${v}</${tag}>`;
 const li = (v) => wrap(v, 'li');
-...
+// ...
 renderer`
 	<h3>Employees</h3>
 	<ul>${people.map(li)}></ul>
@@ -151,7 +192,3 @@ render() {
 	`;
 }
 ```
-
-### Performance
-
-`backbone-component-renderer` will manage any child views it creates internally. If a view is re-rendered using `renderer`, the `remove` function of all of that view's children will be called automatically. This behavior also applies to any Backbone views that were created using the `chunk` function.
