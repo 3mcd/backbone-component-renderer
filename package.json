@@ -16,6 +16,7 @@
     "jquery": "^3.1.1",
     "jsdom": "^9.8.3",
     "jsdom-global": "^2.1.0",
+    "lit-js": "^1.0.1",
     "mocha": "^3.2.0",
     "mocha-jsdom": "^1.1.0",
     "mocha-loader": "^1.0.0",
@@ -30,6 +31,5 @@
     "build": "webpack"
   },
   "author": "",
-  "license": "ISC",
-  "dependencies": {}
+  "license": "ISC"
 }

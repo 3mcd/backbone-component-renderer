@@ -1,6 +1,25 @@
 ## backbone-component-renderer
 
-![backbone-component-renderer example](https://cloud.githubusercontent.com/assets/6402908/20629647/a9ecc0f4-b2fa-11e6-8712-e7315b23f8f7.png)
+```js
+render() {
+	const { filter, onSearch } = this;
+    const links = this.links.map(
+        link => chunk`<li>${ new Link({ link }) }</li>`
+    );
+    this.renderer`
+    	<header>
+	        <nav>
+	            <ul>${links}</ul>
+	        </nav>
+	        ${Avatar}
+	        ${SearchBar({ onSearch })}
+        </header>
+        <main>
+        	${Articles({ collection: this.collection, filter })}
+        </main>
+    `;
+}
+```
 
 ### Why?
 
@@ -135,18 +154,55 @@ renderer`
 `;
 ```
 
-#### Accepted Types
-
-`renderer` handles primitives, `Backbone.View` instances, `Node` instances, chunks, and `Array` instances that can contain of all aformentioned values.
+Templates passed into `chunk` do not need to have a common ancestor.
 
 ```js
-render() {
-	this.renderer`
-		${chunk`whaaat?!`}
-		Normal text...<br />
-		${[[[[['Really'], 'Dumb']]]]}<br />
-		${19208312}<br />
-		${[new FooterView, document.createElement('input')]}
-	`;
-}
+const dlGroup = (t, d) => chunk`
+	<dt>${t}</dt>
+	<dd>${d}</dd>
+`;
+const dl = (pairs) => chunk`<dl>${pairs.map(dlGroup)}</dl>`;
+const benny = dl([
+	['Name', 'Benny'],
+	['Age', 15]
+]);
 ```
+
+#### Utilities
+
+The library exports a function called `factory` that can help reduce the complexity of your templates even further. `factory` takes a constructor function and returns new instances of the constructor when invoked. In this way, you can remove the `new` keyword from your templates completely.
+
+e.g. Using `factory()`
+
+```js
+const { componentRenderer, chunk, factory } = backboneComponentRenderer;
+
+const Header = factory(View.extend({...}));
+const Footer = factory(View.extend({...}));
+
+const App = View.extend({
+	render() {
+		const { user, page } = this;
+		this.renderer`
+			${Header({ user })}
+			${page}
+			${Footer}
+		`;
+	}
+});
+```
+
+#### Accepted Types
+
+`renderer` handles primitives, `Backbone.View` instances, `Node` instances, functions, chunks, and `Array` instances that can contain of all aformentioned values.
+
+| Type                            | Behavior                                                             | Warn |
+|---------------------------------|----------------------------------------------------------------------|------|
+| `Object`                        | Ignored                                                              | Y    |
+| `Array`                         | Flattened, each value inserted immediately after the other in place. | N    |
+| `Function`                      | Return value of function inserted in place.                          | N    |
+| `Backbone.View`                 | Rendered, child node inserted in place.                              | N    |
+| `fn.__proto__ == BB.View`       | New instance created, rendered, child node inserted in place.        | Y    |
+| Chunk                           | Rendered in place.                                                   | N    |
+| `Node`                          | Inserted in place.                                                   | N    |
+| Other                           | `.toString()`                                                        | N    |

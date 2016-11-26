@@ -1,9 +1,11 @@
-const { componentRenderer, chunk, configureRenderer } = backboneComponentRenderer;
+const {
+  configureRenderer,
+  componentRenderer,
+  chunk,
+  factory
+} = backboneComponentRenderer;
 
 configureRenderer({ backbone: window.Backbone });
-
-const factory = (Ctor) => (...args) => create(Ctor, ...args);
-const create = (Ctor, ...args) => new Ctor(...args);
 
 const View = Backbone.View.extend({
   initialize() {
@@ -41,7 +43,9 @@ const Nav = factory(View.extend({
   ],
   render() {
     // Embed iterables that can contain any value (chunk in this example):
-    const links = this.links.map(link => chunk`<li>${Link({ link })}</li>`);
+    const links = this.links.map(
+      link => chunk`<li>${Link({ link })}</li>`
+    );
     this.renderer`
       <ul>${links}</ul>
     `;
@@ -68,21 +72,21 @@ const Header = factory(View.extend({
   render() {
     const { links } = this;
     this.renderer`
-      ${Nav()}
+      ${Nav}
     `;
   }
 }));
 
-const Footer = factory(View.extend({
+const Footer = View.extend({
   tagName: 'footer',
   render() {
     const { links } = this;
     this.renderer`
-      ${Nav()}
+      ${Nav}
       <p>Have a nice day.</p>
     `;
   }
-}));
+})
 
 const App = factory(View.extend({
   className: 'App',
@@ -90,13 +94,13 @@ const App = factory(View.extend({
     const { links, collection } = this;
     // Views that render multiple children:
     this.renderer`
-      ${Header()}
+      ${Header}
       <main>
         <h2>Backbone Component Renderer</h2>
         <p>Renderer is a really bad word, isn't it?</p>
         ${collection.map(model => UserInfo({ model }))}
       </main>
-      ${Footer()}
+      ${Footer}
     `;
   }
 }));
