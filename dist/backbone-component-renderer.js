@@ -63,17 +63,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _litJs = __webpack_require__(1);
 
-	/**
-	 * Public API
-	 */
-
 	var config = { backbone: window.Backbone };
-
-	var configureRenderer = function configureRenderer(options) {
-	  var backbone = options.backbone;
-
-	  config.backbone = options.backbone || config.backbone;
-	};
 
 	var lit = (0, _litJs.createRenderer)({
 	  parse: function parse(view) {
@@ -92,12 +82,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	});
 
-	var chunk = lit.chunk;
+	/**
+	 * Public API
+	 */
 
+	var chunk = lit.chunk;
 	var componentRenderer = function componentRenderer(view) {
 	  return lit.componentRenderer(view.el);
 	};
+	var configureRenderer = function configureRenderer(options) {
+	  var backbone = options.backbone;
 
+	  config.backbone = options.backbone || config.backbone;
+	};
 	var factory = function factory(Ctor) {
 	  return function () {
 	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -203,17 +200,17 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		var _utils = __webpack_require__(2);
 
-		var _const = __webpack_require__(3);
+		var _dom = __webpack_require__(3);
 
-		function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+		var _const = __webpack_require__(4);
 
 		var warn = function warn(msg) {
-		  return console.warn('lit-js:', msg);
+		  return console.warn(_const.ERROR_PREFIX, msg);
 		};
 
 		var warnings = {
 		  TYPE: function TYPE(a, b) {
-		    return a + ' must be of type ' + b;
+		    return a + ' must be of type ' + b + '.';
 		  },
 		  EXP_ARRAY: 'A deeply nested array was used inside of a template expression. Adjust your template to remove redundant nesting of arrays.',
 		  EXP_OBJECT: 'An object was used inside of a template expression. Objects other than views, Nodes and and chunks are ignored.',
@@ -225,6 +222,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 		var isNode = function isNode(c) {
 		  return c instanceof Node;
+		};
+		var isObject = function isObject(c) {
+		  return (typeof c === 'undefined' ? 'undefined' : _typeof(c)) === 'object' && !isArray(c);
 		};
 		var isArray = function isArray(c) {
 		  return Array.isArray(c);
@@ -257,12 +257,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 		var cleanup = function cleanup(child, destroy) {
-		  if (isArray(child)) {
-		    child.forEach(function (c) {
-		      return cleanup(c, destroy);
-		    });
-		    return;
-		  }
 		  var view = componentMap.get(child);
 		  if (view) {
 		    destroy(view);
@@ -272,49 +266,44 @@ return /******/ (function(modules) { // webpackBootstrap
 		    return;
 		  }
 		  if (isChunk(child)) {
-		    child.children.forEach(function (c) {
+		    child.components.forEach(function (c) {
 		      return cleanup(c, destroy);
 		    });
 		  }
 		};
 
-		var renderChunkToElement = function renderChunkToElement(chunk, el, placeholderMatch) {
-		  var html = chunk.html,
-		      children = chunk.children;
-		  // Create an element with the child content of the view.
-
-		  var temp = inject(children, html, placeholderMatch);
-		  // Empty the view element.
-		  (0, _utils.empty)(el);
-		  // Move new elements from temp to view element.
-		  (0, _utils.moveChildren)(temp, el);
+		var renderChunkToElement = function renderChunkToElement(chunk, el) {
+		  var ch = flattenChunk(chunk);
+		  var tt = (0, _dom.tempElement)(ch.html);
+		  (0, _dom.replaceElements)(tt, ch.components);
+		  (0, _dom.emptyNode)(el);
+		  (0, _dom.moveChildNodes)(tt, el);
 		};
 
-		var inject = function inject(children, html, placeholderMatch) {
-		  var chunked = children.map(function (child) {
-		    if (isChunk(child)) {
-		      return [].concat(_toConsumableArray(inject(child.children, child.html, placeholderMatch).childNodes));
+		var placeholderRegex = new RegExp(_const.PLACEHOLDER_HTML, 'g');
+
+		var flattenChunk = function flattenChunk(chunk) {
+		  var i = 0;
+		  var newChunk = { components: [] };
+		  newChunk.html = chunk.html.replace(placeholderRegex, function (match) {
+		    var c = chunk.components[i++];
+		    if (isChunk(c)) {
+		      var flat = flattenChunk(c);
+		      newChunk.components = newChunk.components.concat(flat.components);
+		      return flat.html;
+		    } else {
+		      newChunk.components.push(c);
 		    }
-		    return child;
+		    return match;
 		  });
-		  // Build DOM.
-		  var temp = (0, _utils.tempElement)(html);
-		  (0, _utils.replaceElements)(temp, chunked, placeholderMatch);
-		  return temp;
+		  return newChunk;
 		};
 
 		var _createRenderer = function _createRenderer(config) {
 		  var parse = config.parse,
 		      render = config.render,
-		      destroy = config.destroy,
-		      _config$placeholder = config.placeholder,
-		      match = _config$placeholder.match,
-		      template = _config$placeholder.template;
+		      destroy = config.destroy;
 
-
-		  var removePlaceholders = function removePlaceholders(s) {
-		    return s.replace(match, '');
-		  };
 
 		  var componentRenderer = function componentRenderer(el) {
 		    return function renderer(segments) {
@@ -327,37 +316,15 @@ return /******/ (function(modules) { // webpackBootstrap
 		      teardown(el, destroy);
 		      childMap.set(el, ch);
 		      // Render the chunk to the el.
-		      renderChunkToElement(ch, el, match);
+		      renderChunkToElement(ch, el);
 		      return ch;
 		    };
-		  };
-
-		  var chunk = function chunk(segments) {
-		    for (var _len2 = arguments.length, expressions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-		      expressions[_key2 - 1] = arguments[_key2];
-		    }
-
-		    // Placeholder index
-		    var p = 0;
-		    var html = '';
-		    var children = [];
-		    var components = getComponents.apply(undefined, arguments);
-		    components.forEach(function (c) {
-		      if (!isString(c)) {
-		        children.push(c);
-		        c = template(p++);
-		      }
-		      html += c;
-		    });
-		    var ch = { children: children, html: html };
-		    chunks.add(ch);
-		    return ch;
 		  };
 
 		  var getComponent = function getComponent(exp) {
 		    var arr = [];
 		    if (isArray(exp)) {
-		      for (var i = 0; i < exp.length; i++) {
+		      for (var i = 0, len = exp.length; i < len; i++) {
 		        var c = parseExpression(exp[i]);
 		        if (c) {
 		          arr.push(c);
@@ -372,31 +339,51 @@ return /******/ (function(modules) { // webpackBootstrap
 		    return arr;
 		  };
 
-		  var getComponents = function getComponents(segments) {
-		    for (var _len3 = arguments.length, expressions = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-		      expressions[_key3 - 1] = arguments[_key3];
+		  var createChunk = function createChunk(segments) {
+		    var html = '';
+		    var components = [];
+		    var asTag = !!segments.raw;
+
+		    if (!isArray(segments)) {
+		      segments = [segments];
 		    }
 
-		    // componentRenderer() or chunk() was not called as a tag
-		    if (!segments.raw) {
-		      if (!isArray(segments)) {
-		        segments = [segments];
-		      }
-		      return [].concat(_toConsumableArray(segments), expressions).reduce(function (arr, exp, i) {
-		        return arr.concat(getComponent(exp));
-		      }, []);
+		    if (asTag) {
+		      html += segments[0];
 		    }
-		    return expressions.reduce(function (arr, exp, i) {
-		      var seg = segments[i + 1];
-		      arr = arr.concat(getComponent(exp));
-		      arr.push(parseSegment(seg));
-		      return arr;
-		    }, [segments[0]]);
+
+		    for (var i = asTag ? 1 : 0, len = segments.length; i < len; i++) {
+		      var seg = segments[i];
+		      var exp = asTag ? arguments.length <= i - 1 + 1 ? undefined : arguments[i - 1 + 1] : seg;
+		      if (!asTag && isString(seg)) {
+		        html += (0, _utils.escape)(seg);
+		        continue;
+		      }
+		      var c = getComponent(exp);
+		      for (var _i = 0, _len2 = c.length; _i < _len2; _i++) {
+		        if (isString(c[_i])) {
+		          html += c[_i];
+		        } else {
+		          components.push(c[_i]);
+		          html += _const.PLACEHOLDER_HTML;
+		        }
+		      }
+		      if (asTag) {
+		        html += seg;
+		      }
+		    }
+
+		    return { components: components, html: html };
 		  };
 
-		  var parseSegment = function parseSegment(s) {
-		    s = removePlaceholders(s);
-		    return s.replace(_const.HTML_WHITESPACE_REGEX, _const.htmlWhitespaceReplace);
+		  var chunk = function chunk(segments) {
+		    for (var _len3 = arguments.length, expressions = Array(_len3 > 1 ? _len3 - 1 : 0), _key2 = 1; _key2 < _len3; _key2++) {
+		      expressions[_key2 - 1] = arguments[_key2];
+		    }
+
+		    var ch = createChunk.apply(undefined, arguments);
+		    chunks.add(ch);
+		    return ch;
 		  };
 
 		  var parseExpression = function parseExpression(c) {
@@ -408,7 +395,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		        return c;
 		      }
 		      // View library might organize views as arrays.
-		      if ((typeof parsed === 'undefined' ? 'undefined' : _typeof(parsed)) !== 'object' || isArray(parsed)) {
+		      if (!isObject(parsed)) {
 		        warn(warnings.PARSED_NON_OBJECT);
 		      }
 		      // Render the element and return the element (or elements) therein. This
@@ -424,16 +411,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		      // Set the element (or chunk) to the View instance in componentMap. The
 		      // componentMap is accessed in cleanup() to reconcile an element or chunk
 		      // with its view.
-		      if ((typeof el === 'undefined' ? 'undefined' : _typeof(el)) === 'object') {
+		      if (isObject(el)) {
 		        componentMap.set(el, parsed);
 		      }
 		      return el;
 		    };
-		    if (isString(c)) {
-		      return (0, _utils.escape)(removePlaceholders(c));
-		    }
-		    // Component is already a chunk.
-		    if (isChunk(c)) {
+		    if (isString(c) || isChunk(c)) {
 		      return c;
 		    }
 		    // Yield control to the end-user. Attempt to render the component if it is
@@ -446,7 +429,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		    }
 		    // The function could have potentially returned a chunk. Either way, Node
 		    // instances and chunks are the last objects we will accept.
-		    if (isNode(c) || isChunk(c)) {
+		    if (isChunk(c) || isNode(c)) {
 		      return c;
 		    }
 		    if (isArray(c)) {
@@ -454,7 +437,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		      return null;
 		    }
 		    // Ignore all other objects.
-		    if ((typeof c === 'undefined' ? 'undefined' : _typeof(c)) === 'object') {
+		    if (isObject(c)) {
 		      warn(warnings.EXP_OBJECT);
 		      return null;
 		    }
@@ -470,57 +453,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		var createRenderer = function createRenderer() {
 		  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-		  var config = {
-		    parse: function parse(view) {
-		      return view;
-		    },
-		    render: function render(view) {
-		      return view;
-		    },
-		    destroy: function destroy(view) {
-		      return view.parentElement.removeChild(view);
-		    },
-		    placeholder: {
-		      match: _const.PLACEHOLDER_REGEX,
-		      template: _const.placeholderTemplate
-		    }
-		  };
-
-		  var _options$parse = options.parse,
-		      parse = _options$parse === undefined ? config.parse : _options$parse,
-		      _options$render = options.render,
-		      render = _options$render === undefined ? config.render : _options$render,
-		      _options$destroy = options.destroy,
-		      destroy = _options$destroy === undefined ? config.destroy : _options$destroy,
-		      _options$placeholder = options.placeholder,
-		      placeholder = _options$placeholder === undefined ? config.placeholder : _options$placeholder;
-
-
-		  if (!isFunction(render)) {
-		    warn(warnings.TYPE('createRenderer option render', 'Function'));
-		  } else {
-		    config.render = render;
-		  }
-
-		  if (!isFunction(destroy)) {
-		    warn(warnings.TYPE('createRenderer option destroy', 'Function.'));
-		  } else {
-		    config.destroy = destroy;
-		  }
-
-		  if (!isFunction(parse)) {
-		    warn(warnings.TYPE('createRenderer option parse', 'Function.'));
-		  } else {
-		    config.parse = parse;
-		  }
-
-		  var match = placeholder.match,
-		      template = placeholder.template;
-
-
-		  placeholder.match = match;
-		  placeholder.template = template;
-
+		  var config = (0, _utils.applyConfig)((0, _const.createDefaultConfig)(), options, _const.CONFIG_TYPES, _const.ERROR_PREFIX);
 		  return _createRenderer(config);
 		};
 
@@ -535,78 +468,27 @@ return /******/ (function(modules) { // webpackBootstrap
 		Object.defineProperty(exports, "__esModule", {
 		  value: true
 		});
-		var matches = function matches(node, regex) {
-		  regex.lastIndex = 0;
-		  return regex.test(node.textContent);
-		};
 
-		var getPlaceholderId = function getPlaceholderId(node) {
-		  return Number(node.textContent.match(/[\w\.]+/)[0]);
-		};
+		var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-		var swap = function swap(els, ref) {
-		  var parent = ref.parentNode;
-		  if (Array.isArray(els)) {
-		    swap(els[0], ref);
-		    els.slice(1).forEach(function (el, i) {
-		      return parent.insertBefore(el, els[i].nextSibling);
-		    });
-		  } else {
-		    parent.replaceChild(els, ref);
+		var applyConfig = function applyConfig(config, next) {
+		  var types = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+		  var errorPrefix = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+
+		  for (var prop in next) {
+		    var type = types ? types[prop] : null;
+		    var setting = next[prop];
+		    if ((typeof setting === 'undefined' ? 'undefined' : _typeof(setting)) === 'object' && setting !== null) {
+		      applyConfig(config[prop], setting, type);
+		    } else {
+		      if (!types || (type === 'string' ? (typeof setting === 'undefined' ? 'undefined' : _typeof(setting)) === type : setting instanceof type)) {
+		        config[prop] = next[prop];
+		      } else {
+		        throw new TypeError(errorPrefix + 'Setting "' + prop + '" must be of type ' + (type instanceof Function ? type.name : type) + '.');
+		      }
+		    }
 		  }
-		};
-
-		var empty = function empty(parent) {
-		  while (parent.firstChild) {
-		    parent.removeChild(parent.firstChild);
-		  }
-		};
-
-		var moveChildren = function moveChildren(from, to) {
-		  while (from.childNodes.length > 0) {
-		    to.appendChild(from.childNodes[0]);
-		  }
-		};
-
-		var findTextNodes = function findTextNodes(el) {
-		  var n,
-		      a = [],
-		      walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
-		  while (n = walk.nextNode()) {
-		    a.push(n);
-		  }return a;
-		};
-
-		var tempElement = function tempElement(html) {
-		  var el = document.createElement('span');
-		  el.innerHTML = html || '';
-		  return el;
-		};
-
-		var replaceElements = function replaceElements(el, elements, regex) {
-		  var placeholders = [];
-		  // Find placeholder groups. e.g. <% 1 %><% 2 %>
-		  var groups = findTextNodes(el).filter(function (p) {
-		    return matches(p, regex);
-		  });
-		  groups.forEach(function (group) {
-		    // Find sub-placeholders. e.g. <% 2 %>
-		    var matches = group.textContent.match(regex);
-		    // For each sub-placeholder
-		    var rest = group;
-		    matches.forEach(function (text, i) {
-		      var start = rest.textContent.indexOf(text);
-		      var remaining = rest.splitText(start);
-		      rest = remaining.splitText(text.length);
-		      // Grab the newly isolated placeholder
-		      placeholders.push(remaining);
-		    });
-		  });
-		  // Swap each placeholder with its corresponding element in the(elements Array
-		  placeholders.forEach(function (placeholder) {
-		    var pos = getPlaceholderId(placeholder);
-		    swap(elements[pos], placeholder);
-		  });
+		  return config;
 		};
 
 		var escapeChars = {
@@ -624,12 +506,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		  });
 		};
 
-		exports.empty = empty;
-		exports.getPlaceholderId = getPlaceholderId;
-		exports.replaceElements = replaceElements;
-		exports.moveChildren = moveChildren;
 		exports.escape = escape;
-		exports.tempElement = tempElement;
+		exports.applyConfig = applyConfig;
 
 	/***/ },
 	/* 3 */
@@ -640,20 +518,104 @@ return /******/ (function(modules) { // webpackBootstrap
 		Object.defineProperty(exports, "__esModule", {
 		  value: true
 		});
-		var PLACEHOLDER_REGEX = /<%([\s\S]+?)%>/g;
-		var placeholderTemplate = function placeholderTemplate(id) {
-		  return '<% ' + id + ' %>';
+
+		function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+		var getPlaceholderId = function getPlaceholderId(node) {
+		  return Number(node.textContent.match(/[\w\.]+/)[0]);
 		};
+
+		var isMatch = function isMatch(str, regex) {
+		  regex.lastIndex = 0;
+		  return regex.test(str);
+		};
+
+		var swap = function swap(el, ref) {
+		  var parent = ref.parentNode;
+		  if (Array.isArray(el)) {
+		    swap(el[0], ref);
+		    for (var i = 1, len = el.length; i < len; i++) {
+		      parent.insertBefore(el[i], el[i - 1].nextSibling);
+		    }
+		  } else {
+		    parent.replaceChild(el, ref);
+		  }
+		};
+
+		var emptyNode = function emptyNode(parent) {
+		  while (parent.firstChild) {
+		    parent.removeChild(parent.firstChild);
+		  }
+		};
+
+		var moveChildNodes = function moveChildNodes(from, to) {
+		  while (from.childNodes.length > 0) {
+		    to.appendChild(from.childNodes[0]);
+		  }
+		};
+
+		var tempElement = function tempElement(html) {
+		  var el = document.createElement('span');
+		  el.innerHTML = html || '';
+		  return el;
+		};
+
+		var replaceElements = function replaceElements(el, elements, regex) {
+		  var p = [].concat(_toConsumableArray(el.getElementsByClassName('__lit')));
+		  for (var i = elements.length - 1; i >= 0; i--) {
+		    swap(elements[i], p[i]);
+		  }
+		};
+
+		exports.emptyNode = emptyNode;
+		exports.tempElement = tempElement;
+		exports.moveChildNodes = moveChildNodes;
+		exports.replaceElements = replaceElements;
+
+	/***/ },
+	/* 4 */
+	/***/ function(module, exports) {
+
+		'use strict';
+
+		Object.defineProperty(exports, "__esModule", {
+		  value: true
+		});
+		var ERROR_PREFIX = 'litjs: ';
+
+		var CONFIG_TYPES = {
+		  parse: Function,
+		  render: Function,
+		  destroy: Function
+		};
+
+		var createDefaultConfig = function createDefaultConfig() {
+		  return {
+		    parse: function parse(view) {
+		      return view;
+		    },
+		    render: function render(view) {
+		      return view;
+		    },
+		    destroy: function destroy(view) {
+		      return view.parentElement.removeChild(view);
+		    }
+		  };
+		};
+
+		var PLACEHOLDER_HTML = '<span class="__lit"></span>';
 
 		var HTML_WHITESPACE_REGEX = /(^\s+|\>[\s]+\<|\s+$)/g;
 		var htmlWhitespaceReplace = function htmlWhitespaceReplace(str) {
 		  return str.indexOf('>') === 0 ? '><' : '';
 		};
 
-		exports.PLACEHOLDER_REGEX = PLACEHOLDER_REGEX;
-		exports.placeholderTemplate = placeholderTemplate;
+		exports.CONFIG_TYPES = CONFIG_TYPES;
+		exports.ERROR_PREFIX = ERROR_PREFIX;
 		exports.HTML_WHITESPACE_REGEX = HTML_WHITESPACE_REGEX;
+		exports.PLACEHOLDER_HTML = PLACEHOLDER_HTML;
 		exports.htmlWhitespaceReplace = htmlWhitespaceReplace;
+		exports.createDefaultConfig = createDefaultConfig;
 
 	/***/ }
 	/******/ ])

@@ -1,15 +1,6 @@
 import { createRenderer } from 'lit-js';
 
-/**
- * Public API
- */
-
 const config = { backbone: window.Backbone };
-
-const configureRenderer = (options) => {
-  const { backbone } = options;
-  config.backbone = options.backbone || config.backbone;
-};
 
 var lit = createRenderer({
   parse(view) {
@@ -28,12 +19,16 @@ var lit = createRenderer({
   }
 });
 
+/**
+ * Public API
+ */
+
 const chunk = lit.chunk;
-
-const componentRenderer = (view) => {
-  return lit.componentRenderer(view.el);
+const componentRenderer = (view) => lit.componentRenderer(view.el);
+const configureRenderer = (options) => {
+  const { backbone } = options;
+  config.backbone = options.backbone || config.backbone;
 };
-
 const factory = (Ctor) => (...args) => new Ctor(...args);
 
 export {

@@ -1,4 +1,4 @@
-const {
+ const {
   configureRenderer,
   componentRenderer,
   chunk,

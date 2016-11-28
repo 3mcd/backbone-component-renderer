@@ -133,13 +133,13 @@ This problem is easy to fix with JSX because we aren't working with strings:
 If you tried to do something like that with `backbone-component-renderer`, you'd get a bug:
 
 ```js
-`${people.map(v => '<li>' + new PersonItem(...) + '</li>')}` // --> <li>[object Object]</li><li>[object Object]...
+`${people.map(p => '<li>' + new PersonItem(...) + '</li>')}` // --> <li>[object Object]</li><li>[object Object]...
 ```
 
 In order to solve this problem, the library provides another template literal tagging function called `chunk` that will create a sub-template. You can then embed the result in a call to `renderer`, or even other chunks.
 
 ```js
-${people.map(v => chunk`<li>${v}</li>`)}
+${people.map(p => chunk`<li>${new PersonItem(...)}</li>`)}
 ```
 
 `chunk` can get kind of ugly in more complex templates, so it's is best hidden behind helper functions. Here's an example of a `wrap` function that takes a Backbone view and a tag name. The function returns a chunk with the view surrounded by the specified element:
@@ -150,7 +150,7 @@ const li = (v) => wrap(v, 'li');
 // ...
 renderer`
 	<h3>Employees</h3>
-	<ul>${people.map(li)}></ul>
+	<ul>${people.map(v => li(new PersonItem(...)))}></ul>
 `;
 ```
 
@@ -198,11 +198,21 @@ const App = View.extend({
 
 | Type                            | Behavior                                                             | Warn |
 |---------------------------------|----------------------------------------------------------------------|------|
+| `String` 					      | Inner HTML                                                           | N    |
 | `Object`                        | Ignored                                                              | Y    |
 | `Array`                         | Flattened, each value inserted immediately after the other in place. | N    |
+| `Array<Array>`                  | Ignored                                                              | Y    |
 | `Function`                      | Return value of function inserted in place.                          | N    |
 | `Backbone.View`                 | Rendered, child node inserted in place.                              | N    |
 | `fn.__proto__ == BB.View`       | New instance created, rendered, child node inserted in place.        | Y    |
 | Chunk                           | Rendered in place.                                                   | N    |
 | `Node`                          | Inserted in place.                                                   | N    |
 | Other                           | `.toString()`                                                        | N    |
+
+Notes:
+* Deeply nested arrays are ignored.
+* Any non-object value passed into the function forms of `chunk()` or `renderer()` will have their HTML-unsafe characters escaped. e.g:
+
+	```js
+	this.renderer('<div></div>'); // renders &lt;div&gt;&lt;/div&gt;
+	```
