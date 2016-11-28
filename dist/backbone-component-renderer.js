@@ -209,9 +209,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		};
 
 		var warnings = {
-		  TYPE: function TYPE(a, b) {
-		    return a + ' must be of type ' + b + '.';
-		  },
 		  EXP_ARRAY: 'A deeply nested array was used inside of a template expression. Adjust your template to remove redundant nesting of arrays.',
 		  EXP_OBJECT: 'An object was used inside of a template expression. Objects other than views, Nodes and and chunks are ignored.',
 		  PARSED_NON_OBJECT: 'An array or value other than object was returned from parse(). parse() should return a view instance, usually an object. If you return an object other than a view instance, your views may not be disposed of correctly.'
@@ -321,24 +318,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		    };
 		  };
 
-		  var getComponent = function getComponent(exp) {
-		    var arr = [];
-		    if (isArray(exp)) {
-		      for (var i = 0, len = exp.length; i < len; i++) {
-		        var c = parseExpression(exp[i]);
-		        if (c) {
-		          arr.push(c);
-		        }
-		      }
-		    } else {
-		      var _c = parseExpression(exp);
-		      if (_c) {
-		        arr.push(_c);
-		      }
-		    }
-		    return arr;
-		  };
-
 		  var createChunk = function createChunk(segments) {
 		    var html = '';
 		    var components = [];
@@ -359,12 +338,13 @@ return /******/ (function(modules) { // webpackBootstrap
 		        html += (0, _utils.escape)(seg);
 		        continue;
 		      }
-		      var c = getComponent(exp);
-		      for (var _i = 0, _len2 = c.length; _i < _len2; _i++) {
-		        if (isString(c[_i])) {
-		          html += c[_i];
+		      var parsed = parseExpressions(exp);
+		      for (var _i = 0, _len2 = parsed.length; _i < _len2; _i++) {
+		        var c = parsed[_i];
+		        if (isString(c)) {
+		          html += (0, _utils.escape)(c);
 		        } else {
-		          components.push(c[_i]);
+		          components.push(c);
 		          html += _const.PLACEHOLDER_HTML;
 		        }
 		      }
@@ -386,65 +366,84 @@ return /******/ (function(modules) { // webpackBootstrap
 		    return ch;
 		  };
 
-		  var parseExpression = function parseExpression(c) {
-		    var tryParse = function tryParse(c) {
-		      var parsed = parse(c);
-		      // If the parse() function returns a falsey value, the component must not
-		      // be a view.
-		      if (!parsed) {
-		        return c;
-		      }
-		      // View library might organize views as arrays.
-		      if (!isObject(parsed)) {
-		        warn(warnings.PARSED_NON_OBJECT);
-		      }
-		      // Render the element and return the element (or elements) therein. This
-		      // would potentially trigger other calls to componentRenderer which would
-		      // recursively set up child content in a depth-first manner.
-		      var el = render(parsed);
-		      // Multiple elements can be returned from the render function. They are
-		      // combined into a chunk. It is assumed that the parent view will clean
-		      // them up with destroy() is called.
-		      if (isArray(el)) {
-		        el = chunk(el);
-		      }
-		      // Set the element (or chunk) to the View instance in componentMap. The
-		      // componentMap is accessed in cleanup() to reconcile an element or chunk
-		      // with its view.
-		      if (isObject(el)) {
-		        componentMap.set(el, parsed);
-		      }
-		      return el;
-		    };
-		    if (isString(c) || isChunk(c)) {
-		      return c;
+		  var tryParse = function tryParse(exp) {
+		    var parsed = parse(exp);
+		    // If the parse() function returns a falsey value, the component must not
+		    // be a view.
+		    if (!parsed) {
+		      return exp;
+		    }
+		    // View library might organize views as arrays.
+		    if (!isObject(parsed)) {
+		      warn(warnings.PARSED_NON_OBJECT);
+		    }
+		    // Render the element and return the element (or elements) therein. This
+		    // would potentially trigger other calls to componentRenderer which would
+		    // recursively set up child content in a depth-first manner.
+		    var el = render(parsed);
+		    // Multiple elements can be returned from the render function. They are
+		    // combined into a chunk. It is assumed that the parent view will clean
+		    // them up with destroy() is called.
+		    if (isArray(el)) {
+		      el = chunk(el);
+		    }
+		    // Set the element (or chunk) to the View instance in componentMap. The
+		    // componentMap is accessed in cleanup() to reconcile an element or chunk
+		    // with its view.
+		    if (isObject(el)) {
+		      componentMap.set(el, parsed);
+		    }
+		    return el;
+		  };
+
+		  var parseExpression = function parseExpression(exp) {
+		    if (isString(exp) || isChunk(exp)) {
+		      return exp;
 		    }
 		    // Yield control to the end-user. Attempt to render the component if it is
 		    // fact a view instance.
-		    c = tryParse(c);
+		    exp = tryParse(exp);
 		    // If the component is still a function for whatever reason, execute it and
 		    // set the component to the return value of the function.
-		    if (isFunction(c)) {
-		      c = tryParse(c());
+		    if (isFunction(exp)) {
+		      exp = tryParse(exp());
 		    }
 		    // The function could have potentially returned a chunk. Either way, Node
 		    // instances and chunks are the last objects we will accept.
-		    if (isChunk(c) || isNode(c)) {
-		      return c;
+		    if (isChunk(exp) || isNode(exp)) {
+		      return exp;
 		    }
-		    if (isArray(c)) {
+		    if (isArray(exp)) {
 		      warn(warnings.EXP_ARRAY);
 		      return null;
 		    }
 		    // Ignore all other objects.
-		    if (isObject(c)) {
+		    if (isObject(exp)) {
 		      warn(warnings.EXP_OBJECT);
 		      return null;
 		    }
 		    // Stringify all other values.
-		    c = '' + c;
+		    exp = '' + exp;
 
-		    return c;
+		    return exp;
+		  };
+
+		  var parseExpressions = function parseExpressions(exp) {
+		    var arr = [];
+		    if (isArray(exp)) {
+		      for (var i = 0, len = exp.length; i < len; i++) {
+		        var c = parseExpression(exp[i]);
+		        if (c) {
+		          arr.push(c);
+		        }
+		      }
+		    } else {
+		      var _c = parseExpression(exp);
+		      if (_c) {
+		        arr.push(_c);
+		      }
+		    }
+		    return arr;
 		  };
 
 		  return { componentRenderer: componentRenderer, chunk: chunk };
