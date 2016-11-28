@@ -259,6 +259,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		  var view = componentMap.get(child);
 		  if (view) {
 		    destroy(view);
+		    componentMap.delete(child);
 		  }
 		  if (isNode(child)) {
 		    teardown(child, destroy);
@@ -310,9 +311,9 @@ return /******/ (function(modules) { // webpackBootstrap
 		        expressions[_key - 1] = arguments[_key];
 		      }
 
+		      teardown(el, destroy);
 		      var ch = isChunk(segments) ? segments : chunk.apply(undefined, arguments);
 		      // Remove all child components and store the incoming ones.
-		      teardown(el, destroy);
 		      childMap.set(el, ch);
 		      // Render the chunk to the el.
 		      renderChunkToElement(ch, el);
