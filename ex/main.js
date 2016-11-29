@@ -1,20 +1,15 @@
  const {
   configureRenderer,
-  componentRenderer,
+  createRenderer,
+  mount,
   chunk,
   factory
 } = backboneComponentRenderer;
 
-configureRenderer({ backbone: window.Backbone });
+const { View, Collection } = Backbone;
 
-const View = Backbone.View.extend({
-  initialize() {
-    this.renderer = componentRenderer(this);
-    _.bindAll(this, 'renderer');
-  },
-  remove() {
-    Backbone.View.prototype.remove.call(this);
-  }
+configureRenderer({
+  rendererProp: 'renderer'
 });
 
 const Link = factory(View.extend({
@@ -30,7 +25,7 @@ const Link = factory(View.extend({
     this.renderer(text);
   },
   remove() {
-    console.log('Deeply nested child view was removed.');
+    console.log('Deeply nested child Backbone.view was removed.');
     View.prototype.remove.call(this);
   }
 }));
@@ -105,7 +100,7 @@ const App = factory(View.extend({
   }
 }));
 
-const users = new Backbone.Collection([
+const users = new Collection([
   { name: 'Walt', age: 50 },
   { name: 'Hank', age: 43 },
   { name: 'Jessie', age: 25 }
@@ -113,7 +108,4 @@ const users = new Backbone.Collection([
 
 const app = App({ collection: users });
 
-app.render();
-
-document.body.appendChild(app.el);
-window.app = app;
+mount(app, document.body);

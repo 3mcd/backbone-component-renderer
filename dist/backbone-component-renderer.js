@@ -59,19 +59,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.factory = exports.configureRenderer = exports.componentRenderer = exports.chunk = undefined;
+	exports.factory = exports.mount = exports.configureRenderer = exports.createRenderer = exports.chunk = undefined;
 
 	var _litJs = __webpack_require__(1);
 
-	var config = { backbone: window.Backbone };
+	var config = {
+	  Backbone: window.Backbone,
+	  warn: true,
+	  rendererProp: null
+	};
 
 	var lit = (0, _litJs.createRenderer)({
-	  parse: function parse(view) {
-	    if (view instanceof config.backbone.View) {
-	      return view;
-	    } else if (view.prototype instanceof config.backbone.View) {
-	      return new view();
+	  parse: function parse(component) {
+	    var view;
+	    if (component instanceof config.Backbone.View) {
+	      view = component;
+	    } else if (component.prototype instanceof config.Backbone.View) {
+	      if (config.warn) {
+	        console.warn('backbone-component-renderer: A constructor inheriting from Backbone.View was used inside of a template expression. You could be mixing your use of the "new" keyword with this shorthand. Use a factory function to omit "new" completely.');
+	      }
+	      view = new component();
 	    }
+	    if (view) {
+	      if (config.rendererProp) {
+	        view[config.rendererProp] = _createRenderer(view);
+	      }
+	      return view;
+	    }
+	    return false;
 	  },
 	  render: function render(view) {
 	    view.render();
@@ -87,13 +102,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 
 	var chunk = lit.chunk;
-	var componentRenderer = function componentRenderer(view) {
+	var _createRenderer = function _createRenderer(view) {
 	  return lit.componentRenderer(view.el);
 	};
+	var mount = function mount(view, el) {
+	  return lit.componentRenderer(el)(view);
+	};
 	var configureRenderer = function configureRenderer(options) {
-	  var backbone = options.backbone;
+	  var Backbone = options.Backbone,
+	      warn = options.warn,
+	      rendererProp = options.rendererProp;
 
-	  config.backbone = options.backbone || config.backbone;
+	  config.Backbone = options.Backbone || config.Backbone;
+	  if (warn != void 0) {
+	    config.warn = options.warn;
+	  }
+	  if (typeof rendererProp === 'string') {
+	    config.rendererProp = rendererProp;
+	  }
 	};
 	var factory = function factory(Ctor) {
 	  return function () {
@@ -106,8 +132,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 	exports.chunk = chunk;
-	exports.componentRenderer = componentRenderer;
+	exports.createRenderer = _createRenderer;
 	exports.configureRenderer = configureRenderer;
+	exports.mount = mount;
 	exports.factory = factory;
 
 /***/ },
