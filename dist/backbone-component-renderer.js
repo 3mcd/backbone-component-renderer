@@ -63,6 +63,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _litJs = __webpack_require__(1);
 
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 	var config = {
 	  Backbone: window.Backbone,
 	  warn: true,
@@ -86,14 +88,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	      return view;
 	    }
+	    if (component instanceof config.Backbone.$ || 'jQuery' in window && component instanceof jQuery) {
+	      return component;
+	    }
 	    return false;
 	  },
 	  render: function render(view) {
-	    view.render();
-	    return view.el;
+	    if (view instanceof config.Backbone.View) {
+	      view.render();
+	    }
+	    return view.el || [].concat(_toConsumableArray(view));
 	  },
 	  destroy: function destroy(view) {
-	    view.remove();
+	    if (view instanceof config.Backbone.View) {
+	      view.remove();
+	    } else {
+	      view.detach();
+	    }
 	  }
 	});
 
@@ -225,29 +236,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 		var _utils = __webpack_require__(2);
 
-		var _types = __webpack_require__(3);
+		var _dom = __webpack_require__(3);
 
-		var _chunk = __webpack_require__(6);
+		var _const = __webpack_require__(4);
 
-		var _dom = __webpack_require__(7);
+		var _types = __webpack_require__(5);
 
-		var _const = __webpack_require__(8);
+		var _log = __webpack_require__(8);
 
-		var _parser = __webpack_require__(9);
-
-		var _parser2 = _interopRequireDefault(_parser);
-
-		function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-		var warn = function warn(msg) {
-		  return console.warn(_const.ERROR_PREFIX, msg);
-		};
-
-		var warnings = {
-		  EXP_ARRAY: 'A deeply nested array was used inside of a template value. Adjust your template to remove redundant nesting of arrays.',
-		  EXP_OBJECT: 'An object was used inside of a template value. Objects other than views, Nodes and and chunks are ignored.',
-		  PARSED_NON_OBJECT: 'An array or value other than object was returned from parse(). parse() should return a view instance, usually an object. If you return an object other than a view instance, your views may not be disposed of correctly.'
-		};
+		var _chunk = __webpack_require__(9);
 
 		// In theory, use of WeakMaps will prevent us from causing memory leaks.
 		// Sometimes we will hold on to many nodes at a time, and those nodes may be
@@ -325,7 +322,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		    }
 		    // Supplied parse function returned a non-Object value.
 		    if (!(0, _utils.isObject)(parsed)) {
-		      warn(warnings.PARSED_NON_OBJECT);
+		      (0, _log.warn)(_log.warnings.PARSED_NON_OBJECT);
 		    }
 		    // Render the view and return the element (or elements) therein. This
 		    // would potentially trigger other calls to componentRenderer which would
@@ -448,6 +445,114 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	/***/ },
 	/* 3 */
+	/***/ function(module, exports) {
+
+		'use strict';
+
+		Object.defineProperty(exports, "__esModule", {
+		  value: true
+		});
+
+		function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+		var getPlaceholderId = function getPlaceholderId(node) {
+		  return Number(node.textContent.match(/[\w\.]+/)[0]);
+		};
+
+		var isMatch = function isMatch(str, regex) {
+		  regex.lastIndex = 0;
+		  return regex.test(str);
+		};
+
+		var swap = function swap(el, ref) {
+		  var parent = ref.parentNode;
+		  if (Array.isArray(el)) {
+		    swap(el[0], ref);
+		    for (var i = 1, len = el.length; i < len; i++) {
+		      parent.insertBefore(el[i], el[i - 1].nextSibling);
+		    }
+		  } else {
+		    parent.replaceChild(el, ref);
+		  }
+		};
+
+		var emptyNode = function emptyNode(parent) {
+		  while (parent.firstChild) {
+		    parent.removeChild(parent.firstChild);
+		  }
+		};
+
+		var moveChildNodes = function moveChildNodes(from, to) {
+		  while (from.childNodes.length > 0) {
+		    to.appendChild(from.childNodes[0]);
+		  }
+		};
+
+		var tempElement = function tempElement(html) {
+		  var el = document.createElement('span');
+		  el.innerHTML = html || '';
+		  return el;
+		};
+
+		var replaceElements = function replaceElements(el, elements, regex) {
+		  var p = [].concat(_toConsumableArray(el.getElementsByTagName('litpl')));
+		  for (var i = elements.length - 1; i >= 0; i--) {
+		    swap(elements[i], p[i]);
+		  }
+		};
+
+		exports.emptyNode = emptyNode;
+		exports.tempElement = tempElement;
+		exports.moveChildNodes = moveChildNodes;
+		exports.replaceElements = replaceElements;
+
+	/***/ },
+	/* 4 */
+	/***/ function(module, exports) {
+
+		'use strict';
+
+		Object.defineProperty(exports, "__esModule", {
+		  value: true
+		});
+		var CONFIG_TYPES = {
+		  parse: Function,
+		  render: Function,
+		  destroy: Function
+		};
+		var ERROR_PREFIX = 'lit-js: ';
+		var HTML_WHITESPACE_REGEX = /(^\s+|\>[\s]+\<|\s+$)/g;
+		var PLACEHOLDER_HTML = '<litpl></litpl>';
+
+		var createDefaultConfig = function createDefaultConfig() {
+		  return {
+		    parse: function parse(c) {
+		      if (c.nodeType) {
+		        return c;
+		      }
+		    },
+		    render: function render(view) {
+		      return view;
+		    },
+		    destroy: function destroy(view) {
+		      view.parentElement.removeChild(view);
+		    }
+		  };
+		};
+
+		var htmlWhitespaceReplace = function htmlWhitespaceReplace(str) {
+		  return str.indexOf('>') === 0 ? '><' : '';
+		};
+
+		exports.CONFIG_TYPES = CONFIG_TYPES;
+		exports.ERROR_PREFIX = ERROR_PREFIX;
+		exports.HTML_WHITESPACE_REGEX = HTML_WHITESPACE_REGEX;
+		exports.PLACEHOLDER_HTML = PLACEHOLDER_HTML;
+		exports.htmlWhitespaceReplace = htmlWhitespaceReplace;
+		exports.createDefaultConfig = createDefaultConfig;
+
+	/***/ },
+	/* 5 */
 	/***/ function(module, exports, __webpack_require__) {
 
 		'use strict';
@@ -457,11 +562,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		});
 		exports.set = exports.map = undefined;
 
-		var _map = __webpack_require__(4);
+		var _map = __webpack_require__(6);
 
 		var _map2 = _interopRequireDefault(_map);
 
-		var _set = __webpack_require__(5);
+		var _set = __webpack_require__(7);
 
 		var _set2 = _interopRequireDefault(_set);
 
@@ -471,7 +576,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		exports.set = _set2.default;
 
 	/***/ },
-	/* 4 */
+	/* 6 */
 	/***/ function(module, exports) {
 
 		'use strict';
@@ -523,7 +628,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		exports.default = map;
 
 	/***/ },
-	/* 5 */
+	/* 7 */
 	/***/ function(module, exports) {
 
 		'use strict';
@@ -556,7 +661,33 @@ return /******/ (function(modules) { // webpackBootstrap
 		exports.default = set;
 
 	/***/ },
-	/* 6 */
+	/* 8 */
+	/***/ function(module, exports, __webpack_require__) {
+
+		'use strict';
+
+		Object.defineProperty(exports, "__esModule", {
+		  value: true
+		});
+		exports.warnings = exports.warn = undefined;
+
+		var _const = __webpack_require__(4);
+
+		var warn = function warn(msg) {
+		  return console.warn(_const.ERROR_PREFIX, msg);
+		};
+
+		var warnings = {
+		  EXP_ARRAY: 'A deeply nested array was used inside of a template value. Adjust your template to remove redundant nesting of arrays.',
+		  EXP_OBJECT: 'An object was used inside of a template value. Objects other than views, Nodes and and chunks are ignored.',
+		  PARSED_NON_OBJECT: 'An array or value other than object was returned from parse(). parse() should return a view instance, usually an object. If you return an object other than a view instance, your views may not be disposed of correctly.'
+		};
+
+		exports.warn = warn;
+		exports.warnings = warnings;
+
+	/***/ },
+	/* 9 */
 	/***/ function(module, exports, __webpack_require__) {
 
 		'use strict';
@@ -566,15 +697,15 @@ return /******/ (function(modules) { // webpackBootstrap
 		});
 		exports.renderChunk = exports.compileChunk = exports.isChunk = exports.chunks = undefined;
 
-		var _types = __webpack_require__(3);
-
 		var _utils = __webpack_require__(2);
 
-		var _dom = __webpack_require__(7);
+		var _dom = __webpack_require__(3);
 
-		var _const = __webpack_require__(8);
+		var _const = __webpack_require__(4);
 
-		var _parser = __webpack_require__(9);
+		var _types = __webpack_require__(5);
+
+		var _parser = __webpack_require__(10);
 
 		var _parser2 = _interopRequireDefault(_parser);
 
@@ -676,117 +807,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		exports.renderChunk = renderChunk;
 
 	/***/ },
-	/* 7 */
-	/***/ function(module, exports) {
-
-		'use strict';
-
-		Object.defineProperty(exports, "__esModule", {
-		  value: true
-		});
-
-		function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-		var getPlaceholderId = function getPlaceholderId(node) {
-		  return Number(node.textContent.match(/[\w\.]+/)[0]);
-		};
-
-		var isMatch = function isMatch(str, regex) {
-		  regex.lastIndex = 0;
-		  return regex.test(str);
-		};
-
-		var swap = function swap(el, ref) {
-		  var parent = ref.parentNode;
-		  if (Array.isArray(el)) {
-		    swap(el[0], ref);
-		    for (var i = 1, len = el.length; i < len; i++) {
-		      parent.insertBefore(el[i], el[i - 1].nextSibling);
-		    }
-		  } else {
-		    parent.replaceChild(el, ref);
-		  }
-		};
-
-		var emptyNode = function emptyNode(parent) {
-		  while (parent.firstChild) {
-		    parent.removeChild(parent.firstChild);
-		  }
-		};
-
-		var moveChildNodes = function moveChildNodes(from, to) {
-		  while (from.childNodes.length > 0) {
-		    to.appendChild(from.childNodes[0]);
-		  }
-		};
-
-		var tempElement = function tempElement(html) {
-		  var el = document.createElement('span');
-		  el.innerHTML = html || '';
-		  return el;
-		};
-
-		var replaceElements = function replaceElements(el, elements, regex) {
-		  var p = [].concat(_toConsumableArray(el.getElementsByTagName('litpl')));
-		  for (var i = elements.length - 1; i >= 0; i--) {
-		    swap(elements[i], p[i]);
-		  }
-		};
-
-		exports.emptyNode = emptyNode;
-		exports.tempElement = tempElement;
-		exports.moveChildNodes = moveChildNodes;
-		exports.replaceElements = replaceElements;
-
-	/***/ },
-	/* 8 */
-	/***/ function(module, exports) {
-
-		'use strict';
-
-		Object.defineProperty(exports, "__esModule", {
-		  value: true
-		});
-		var ERROR_PREFIX = 'litjs: ';
-
-		var CONFIG_TYPES = {
-		  parse: Function,
-		  render: Function,
-		  destroy: Function
-		};
-
-		var createDefaultConfig = function createDefaultConfig() {
-		  return {
-		    parse: function parse(c) {
-		      if (c.nodeType) {
-		        return c;
-		      }
-		    },
-		    render: function render(view) {
-		      return view;
-		    },
-		    destroy: function destroy(view) {
-		      view.parentElement.removeChild(view);
-		    }
-		  };
-		};
-
-		var PLACEHOLDER_HTML = '<litpl></litpl>';
-
-		var HTML_WHITESPACE_REGEX = /(^\s+|\>[\s]+\<|\s+$)/g;
-		var htmlWhitespaceReplace = function htmlWhitespaceReplace(str) {
-		  return str.indexOf('>') === 0 ? '><' : '';
-		};
-
-		exports.CONFIG_TYPES = CONFIG_TYPES;
-		exports.ERROR_PREFIX = ERROR_PREFIX;
-		exports.HTML_WHITESPACE_REGEX = HTML_WHITESPACE_REGEX;
-		exports.PLACEHOLDER_HTML = PLACEHOLDER_HTML;
-		exports.htmlWhitespaceReplace = htmlWhitespaceReplace;
-		exports.createDefaultConfig = createDefaultConfig;
-
-	/***/ },
-	/* 9 */
+	/* 10 */
 	/***/ function(module, exports, __webpack_require__) {
 
 		'use strict';
@@ -795,9 +816,11 @@ return /******/ (function(modules) { // webpackBootstrap
 		  value: true
 		});
 
-		var _chunk = __webpack_require__(6);
-
 		var _utils = __webpack_require__(2);
+
+		var _chunk = __webpack_require__(9);
+
+		var _log = __webpack_require__(8);
 
 		var $VALUE_REJECTED = {};
 
@@ -821,12 +844,12 @@ return /******/ (function(modules) { // webpackBootstrap
 		    return val;
 		  }
 		  if ((0, _utils.isArray)(val)) {
-		    warn(warnings.EXP_ARRAY);
+		    (0, _log.warn)(_log.warnings.EXP_ARRAY);
 		    return $VALUE_REJECTED;
 		  }
 		  // Ignore all other objects.
 		  if ((0, _utils.isObject)(val)) {
-		    warn(warnings.EXP_OBJECT);
+		    (0, _log.warn)(_log.warnings.EXP_OBJECT);
 		    return $VALUE_REJECTED;
 		  }
 		  // Stringify all other values.

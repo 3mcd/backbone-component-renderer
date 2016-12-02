@@ -23,14 +23,11 @@ const Link = factory(View.extend({
     this.el.href = url;
     // Render any value directly:
     this.renderer(text);
-  },
-  remove() {
-    console.log('Deeply nested child Backbone.view was removed.');
-    View.prototype.remove.call(this);
   }
 }));
 
 const Nav = factory(View.extend({
+  className: 'Nav',
   tagName: 'nav',
   links: [
     { url: '#/home', text: 'Home' },
@@ -47,6 +44,37 @@ const Nav = factory(View.extend({
   }
 }));
 
+const Avatar = factory(View.extend({
+  className: 'Avatar',
+  render() {
+    this.renderer`
+      <img>
+    `;
+  }
+}))
+
+const Header = factory(View.extend({
+  className: 'Header',
+  tagName: 'header',
+  render() {
+    this.renderer`
+      ${Avatar}
+      ${Nav}
+    `;
+  }
+}));
+
+const Footer = View.extend({
+  className: 'Footer',
+  tagName: 'footer',
+  render() {
+    this.renderer`
+      ${Nav}
+      <p>Have a nice day.</p>
+    `;
+  }
+});
+
 const UserInfo = factory(View.extend({
   className: 'UserInfo',
   render() {
@@ -59,29 +87,57 @@ const UserInfo = factory(View.extend({
         <dd>${age}</dd>
       </dl>
     `;
+  },
+  remove() {
+    console.log('Deeply nested child Backbone.view was removed.');
+    View.prototype.remove.call(this);
   }
 }));
 
-const Header = factory(View.extend({
-  tagName: 'header',
+const UserList = factory(View.extend({
+  className: 'UserList',
+  initialize() {
+    this.listenTo(this.collection, 'update', this.render);
+  },
   render() {
-    const { links } = this;
+    const items = this.collection.map(
+      model => chunk`<li>${UserInfo({ model })}</li>`
+    );
     this.renderer`
-      ${Nav}
+      <ul>${items}</ul>
     `;
   }
 }));
 
-const Footer = View.extend({
-  tagName: 'footer',
+const UserForm = factory(View.extend({
+  className: 'UserForm',
+  events: {
+    'click button': 'submit'
+  },
+  initialize() {
+    // If you need references to elements later, instead of selected them after
+    // you render, you can create them once and insert them in the template.
+    this.$name = $('<input />');
+    this.$age = $('<input />');
+  },
   render() {
-    const { links } = this;
+    const { $name, $age } = this;
     this.renderer`
-      ${Nav}
-      <p>Have a nice day.</p>
+      <label>Name: ${$name}</label>
+      <label>Age: ${$age}</label>
+      <button>Submit</button>
     `;
+  },
+  submit() {
+    const { collection, $name, $age } = this;
+    collection.add({
+      name: $name.val(),
+      age: $age.val()
+    });
+    $name.val('');
+    $age.val('');
   }
-})
+}));
 
 const App = factory(View.extend({
   className: 'App',
@@ -93,7 +149,8 @@ const App = factory(View.extend({
       <main>
         <h2>Backbone Component Renderer</h2>
         <p>Renderer is a really bad word, isn't it?</p>
-        ${collection.map(model => UserInfo({ model }))}
+        ${UserList({ collection })}
+        ${UserForm({ collection })}
       </main>
       ${Footer}
     `;

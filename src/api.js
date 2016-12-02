@@ -23,14 +23,23 @@ var lit = createRenderer({
       }
       return view;
     }
+    if (component instanceof config.Backbone.$ || ('jQuery' in window && component instanceof jQuery)) {
+      return component;
+    }
     return false;
   },
   render(view) {
-    view.render();
-    return view.el;
+    if (view instanceof config.Backbone.View) {
+      view.render();
+    }
+    return view.el || [...view];
   },
   destroy(view) {
-    view.remove();
+    if (view instanceof config.Backbone.View) {
+      view.remove();
+    } else {
+      view.detach();
+    }
   }
 });
 

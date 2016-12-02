@@ -29,6 +29,8 @@ Backbone render functions are often full of child view instantiation and associa
 
 There is no inheritance or other overarching pattern you have to subscribe to because the library is mainly comprised of a [template literal tag function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals) to build view hierarchies. You can implement it incrementally in larger projects, and it has a very small file size.
 
+Note: This is not a VDOM library - but it is likely fast enough for your app.
+
 ### Setup
 
 Installation: `npm i backbone-component-renderer -S`
