@@ -1,6 +1,6 @@
 {
   "name": "backbone-component-renderer",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A small tool used to help build declarative Backbone render functions.",
   "main": "dist/backbone-component-renderer.js",
   "devDependencies": {
