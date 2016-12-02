@@ -182,7 +182,7 @@ const benny = dl([
 
 ### Utilities
 
-The library exports a few functions to help reduce the complexity of your templates even furhter. 
+The library exports a few functions to help reduce the complexity of your templates even further. 
 
 #### `factory(ctor)`
 
