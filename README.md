@@ -15,7 +15,7 @@ render() {
 	        ${SearchBar({ onSearch })}
         </header>
         <main>
-        	${Articles({ collection, filter })}
+        	${Articles({ collection })}
         </main>
     `;
 }
@@ -23,13 +23,13 @@ render() {
 
 ### Why?
 
-Backbone render functions are often full of child view instantiation, rendering, and appending. In addition, you'll need to create placeholder elements if you want to append child views to specific parts of a layout, adding additional complexity to your application's HTML structure.
+Backbone render functions are often full of child view instantiation, rendering, and appending. In addition, you need to create placeholder elements any time you want to append child views to specific parts of a layout, adding additional complexity to your application's HTML structure.
 
-`backbone-component-renderer` allows you to write nested Backbone view structures in a more declarative way, without placeholder elements or verbose `render()` calls.
+`backbone-component-renderer` allows you to write nested Backbone view structures in a more declarative way, without placeholder elements (for the most part) or verbose `render()` calls.
 
-There is no inheritance or other overarching pattern you have to subscribe to because the library is mainly comprised of a [template literal tag function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals) to build view hierarchies. You can implement it incrementally in larger projects, and it has a very small file size.
+There is no inheritance or other overarching pattern you have to subscribe to because the library is mainly comprised of a [template literal tag function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals) to build view hierarchies. It can be implemented incrementally in larger projects, supports IE9 and later, and is relatively small (~20kb w/ comments, unminified).
 
-__Note:__ This isn't a VDOM library - but it's likely fast enough for your app.
+__Disclaimer:__ This isn't a VDOM library, and template literals aren't JSX ([or are they?](https://github.com/trueadm/t7)). The syntax that `backbone-component-renderer` provides will make your Backbone render functions prettier, but you can still fall into the same traps that a Backbone app without this library might. Just because you can embed views provided by your router right next to static views and re-render the whole app doesn't mean you should.
 
 ### Setup
 
@@ -105,9 +105,39 @@ const Menu = BaseView.extend({
 })
 ```
 
+#### jQuery
+
+You can pass jQuery instances to `renderer`. Elements within a jQuery collection will be inserted in order as if they were in an array, e.g:
+
+```js
+const els = $('<div />').add($('<div />'));
+componentRenderer(document.body)(els); // Renders <div></div><div></div>
+```
+
+jQuery elements inserted into a template will be [detached](https://api.jquery.com/detach/) but not [removed](https://api.jquery.com/remove/). This will allow you to maintain data and event handlers on elements created by jQuery between renders.
+
+It would probably be better to use `View.events` in this example, but the point still stands:
+
+```js
+initialize() {
+    this.$name = $('<input />').on(...);
+    this.$age = $('<input />').on(...);
+},
+render() {
+    const { $name, $age } = this;
+    // $name and $age are the same jQuery instances. Each render, they are
+    // detached but not removed, meaning their event handlers aren't removed.
+    this.renderer`
+        <label>Name: ${$name}</label>
+        <label>Age: ${$age}</label>
+        <button>Submit</button>
+    `;
+}
+```
+
 #### As a function
 
-`renderer` can also be used as a regular function. You can pass it strings and other primitives, DOM elements, `Backbone.View` instances, arrays, and chunks (discussed below):
+`renderer` can also be used as a regular function. You can pass it strings and other primitives, DOM elements, `Backbone.View` instances, arrays, jQuery collections and chunks (discussed below):
 
 ```js
 this.renderer(new BattleView());
@@ -219,3 +249,43 @@ const el = document.getElementById('app');
 const app = new App();
 mount(app, el);
 ```
+
+### Regions
+
+Re-rendering an entire view can be dangerous. Take the following example:
+
+```js
+render() {
+    // Bad! Re-renders Header AND Footer
+    this.renderer`
+        ${Header}
+        ${this.page}
+        ${Footer}
+    `;
+},
+show(view) {
+    this.page = view;
+    this.render();
+}
+```
+
+Here we are rendering `Header` and `Footer` each time `show` is called. This is bad for performance and we'd lose any internal state that those views may have had. Instead, let's mount these views to a placeholder element:
+
+```js
+initialize() {
+    this.page = $('<div />');
+},
+render() {
+    this.renderer`
+        ${Header}
+        ${this.page}
+        ${Footer}
+    `;
+},
+show(view) {
+    // Render the next view into the page element.
+    mount(view, this.page);
+}
+```
+
+There is one downside to this solution: we have introduced an additional element into our HTML heirarchy. But it's a small price to pay to not affect the state of other components that don't need to be re-rendered.

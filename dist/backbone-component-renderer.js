@@ -71,63 +71,85 @@ return /******/ (function(modules) { // webpackBootstrap
 	  rendererProp: null
 	};
 
+	var isView = function isView(obj) {
+	  return obj instanceof config.Backbone.View;
+	};
+	var isViewCtor = function isViewCtor(obj) {
+	  return obj.prototype instanceof config.Backbone.View;
+	};
+	var isJQuery = function isJQuery(obj) {
+	  return obj instanceof config.Backbone.$ || 'jQuery' in window && obj instanceof jQuery;
+	};
+
 	var lit = (0, _litJs.createRenderer)({
 	  parse: function parse(component) {
-	    var view;
-	    if (component instanceof config.Backbone.View) {
+	    var view = false;
+	    if (isView(component)) {
 	      view = component;
-	    } else if (component.prototype instanceof config.Backbone.View) {
+	    } else if (isViewCtor(component)) {
 	      if (config.warn) {
 	        console.warn('backbone-component-renderer: A constructor inheriting from Backbone.View was used inside of a template expression. You could be mixing your use of the "new" keyword with this shorthand. Use a factory function to omit "new" completely.');
 	      }
 	      view = new component();
 	    }
 	    if (view) {
+	      // Assign renderer to view instance.
 	      if (config.rendererProp) {
 	        view[config.rendererProp] = _createRenderer(view);
 	      }
-	      return view;
+	    } else if (isJQuery(component)) {
+	      view = component;
 	    }
-	    if (component instanceof config.Backbone.$ || 'jQuery' in window && component instanceof jQuery) {
-	      return component;
-	    }
-	    return false;
+	    return view;
 	  },
 	  render: function render(view) {
-	    if (view instanceof config.Backbone.View) {
+	    if (isView(view)) {
 	      view.render();
+	      return view.el;
 	    }
-	    return view.el || [].concat(_toConsumableArray(view));
+	    // View is a jQuery object.
+	    return [].concat(_toConsumableArray(view));
 	  },
 	  destroy: function destroy(view) {
-	    if (view instanceof config.Backbone.View) {
+	    if (isView(view)) {
 	      view.remove();
 	    } else {
+	      // View is a jQuery object.
 	      view.detach();
 	    }
 	  }
 	});
 
+	var chunk = lit.chunk,
+	    componentRenderer = lit.componentRenderer;
+
 	/**
 	 * Public API
 	 */
 
-	var chunk = lit.chunk;
 	var _createRenderer = function _createRenderer(view) {
-	  return lit.componentRenderer(view.el);
+	  return componentRenderer(view.el);
 	};
 	var mount = function mount(view, el) {
-	  return lit.componentRenderer(el)(view);
+	  if (isJQuery(el)) {
+	    el = el[0];
+	  }
+	  componentRenderer(el)(view);
 	};
 	var configureRenderer = function configureRenderer(options) {
 	  var Backbone = options.Backbone,
+	      jQuery = options.jQuery,
 	      warn = options.warn,
 	      rendererProp = options.rendererProp;
 
+
 	  config.Backbone = options.Backbone || config.Backbone;
+	  config.jQuery = options.jQuery || config.jQuery;
+
 	  if (warn != void 0) {
 	    config.warn = options.warn;
 	  }
+
 	  if (typeof rendererProp === 'string') {
 	    config.rendererProp = rendererProp;
 	  }

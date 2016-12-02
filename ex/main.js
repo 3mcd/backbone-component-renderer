@@ -141,19 +141,35 @@ const UserForm = factory(View.extend({
 
 const App = factory(View.extend({
   className: 'App',
+  events: {
+    'click button': 'switch'
+  },
+  initialize() {
+    this.page = $('<div />', { class: 'page' });
+  },
   render() {
-    const { links, collection } = this;
+    const { page, links, collection } = this;
     // Views that render multiple children:
     this.renderer`
       ${Header}
       <main>
         <h2>Backbone Component Renderer</h2>
         <p>Renderer is a really bad word, isn't it?</p>
-        ${UserList({ collection })}
-        ${UserForm({ collection })}
+        ${page}
+        <button>Switch</button>
       </main>
       ${Footer}
     `;
+    this.list = true;
+    this.switch();
+  },
+  switch() {
+    const { page, collection } = this;
+    const view = this.list ?
+      UserList({ collection }) :
+      UserForm({ collection });
+    mount(view, page);
+    this.list = !this.list;
   }
 }));
 
