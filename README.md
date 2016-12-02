@@ -23,13 +23,13 @@ render() {
 
 ### Why?
 
-Backbone render functions are often full of child view instantiation and associated rendering and appending. In addition, you'll need to create placeholder elements if you want to append child views to specific parts of a layout, adding additional complexity to your application's HTML structure.
+Backbone render functions are often full of child view instantiation, rendering, and appending. In addition, you'll need to create placeholder elements if you want to append child views to specific parts of a layout, adding additional complexity to your application's HTML structure.
 
 `backbone-component-renderer` allows you to write nested Backbone view structures in a more declarative way, without placeholder elements or verbose `render()` calls.
 
 There is no inheritance or other overarching pattern you have to subscribe to because the library is mainly comprised of a [template literal tag function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals) to build view hierarchies. You can implement it incrementally in larger projects, and it has a very small file size.
 
-Note: This is not a VDOM library - but it is likely fast enough for your app.
+__Note:__ This isn't a VDOM library - but it's likely fast enough for your app.
 
 ### Setup
 
@@ -63,7 +63,7 @@ Other config options:
 
 The main function you need to get up and running is `createRenderer`. This function takes a `Backbone.View` instance and returns a new function that you'll use to render your views.
 
-The quickest way to start is to create one of these functions with `createRenderer` each time you render a view. This function can take a variety of parameters, but the simplest way to use it is as a (template literal tagging function)[tagging template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#Tagged_template_literals):
+The quickest way to start is to create one of these functions with `createRenderer` each time you render a view. This function can take a variety of parameters, but the simplest way to use it is as a template literal tagging function:
 
 ```js
 render() {
@@ -105,6 +105,8 @@ const Menu = BaseView.extend({
 })
 ```
 
+#### As a function
+
 `renderer` can also be used as a regular function. You can pass it strings and other primitives, DOM elements, `Backbone.View` instances, arrays, and chunks (discussed below):
 
 ```js
@@ -112,7 +114,7 @@ this.renderer(new BattleView());
 this.renderer(['What', new TotallyRadView(), 'whatwhatwhat']);
 ```
 
-However, you cannot pass a template literal into the tag form of `renderer` and expect the child content to be set up properly, because the expression is evaluated before being passed in:
+However, you can't pass a template literal into the tag form of `renderer` and expect the child content to be set up properly, because the expression is evaluated before being passed in:
 
 ```js
 this.renderer(`
@@ -121,7 +123,9 @@ this.renderer(`
 // <ul>[object Object], [object Object]...</ul>
 ```
 
-HTML characters in  strings are automatically escaped if used in template literal expressions or passed directly into the `renderer` function:
+#### HTML safety
+
+HTML characters in strings are automatically escaped if used in template literal expressions or passed directly into the `renderer` function:
 
 ```js
 this.renderer(['<div>']);  // renders &lt;div&gt;
@@ -150,7 +154,7 @@ In order to solve this problem, the library provides another template literal ta
 ${people.map(p => chunk`<li>${new PersonItem(...)}</li>`)}
 ```
 
-`chunk` can get kind of ugly in more complex templates, so it's is best hidden behind helper functions. Here's an example of a `wrap` function that takes a Backbone view and a tag name. The function returns a chunk with the view surrounded by the specified element:
+`chunk` can get kind of ugly in more complex templates, so it's best hidden behind helper functions. Here's an example of a `wrap` function that takes a Backbone view and a tag name. The function returns a chunk with the view surrounded by the specified element:
 
 ```js
 const wrap = (v, tag) => chunk`<${tag}>${v}</${tag}>`;
@@ -162,7 +166,7 @@ renderer`
 `;
 ```
 
-Templates passed into `chunk` or `renderer` do not need to have a common ancestor:
+Templates passed into `chunk` or `renderer` don't need to have a common ancestor:
 
 ```js
 const dlGroup = (t, d) => chunk`
@@ -176,11 +180,13 @@ const benny = dl([
 ]);
 ```
 
-#### Utilities
+### Utilities
 
-##### `factory(ctor)`
+The library exports a few functions to help reduce the complexity of your templates even furhter. 
 
-The library exports a function called `factory` that can help reduce the complexity of your templates even further. `factory` takes a constructor function and returns new instances of the constructor when invoked. In this way, you can remove the `new` keyword from your templates completely.
+#### `factory(ctor)`
+
+`factory` takes a constructor function and returns new instances of the constructor when invoked. In this way, you can remove the `new` keyword from your templates completely.
 
 e.g. Using `factory()`:
 
@@ -202,9 +208,11 @@ const App = BaseView.extend({
 });
 ```
 
-##### `mount(app, el)`
+#### `mount(app, el)`
 
 `mount` will render a component with `renderer` to a DOM element. This is especially useful with the `rendererProp` config option, because all views and sub-views of the call will be assigned a `renderer` instance without adding or modifying a base view.
+
+e.g. Using `mount()` to render a root view to the document:
 
 ```js
 const el = document.getElementById('app');
