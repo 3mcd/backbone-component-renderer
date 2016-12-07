@@ -2,7 +2,7 @@
 
 ```js
 render() {
-	const { filter, onSearch, collection } = this;
+	const { onSearch, collection } = this;
     const links = this.links.map(
         link => chunk`<li>${ new Link({ link }) }</li>`
     );
