@@ -56,12 +56,14 @@ const { chunk, componentRenderer } = lit;
  */
 
 const _createRenderer = (view) => componentRenderer(view.el);
+
 const mount = (view, el) => {
   if (isJQuery(el)) {
     el = el[0];
   }
   componentRenderer(el)(view);
-}
+};
+
 const configureRenderer = (options) => {
   const { Backbone, jQuery, warn, rendererProp } = options;
   
@@ -76,7 +78,16 @@ const configureRenderer = (options) => {
     config.rendererProp = rendererProp;
   }
 };
-const factory = (Ctor) => (...args) => new Ctor(...args);
+
+const factory = (Ctor) => {
+  const fn = function (...args) {
+    return new Ctor(...args);
+  };
+
+  Object.assign(fn, Ctor);
+
+  return fn;
+};
 
 export {
   chunk,

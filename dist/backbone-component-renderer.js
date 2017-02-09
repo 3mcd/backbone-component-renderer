@@ -130,12 +130,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _createRenderer = function _createRenderer(view) {
 	  return componentRenderer(view.el);
 	};
+
 	var mount = function mount(view, el) {
 	  if (isJQuery(el)) {
 	    el = el[0];
 	  }
 	  componentRenderer(el)(view);
 	};
+
 	var configureRenderer = function configureRenderer(options) {
 	  var Backbone = options.Backbone,
 	      jQuery = options.jQuery,
@@ -154,14 +156,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	    config.rendererProp = rendererProp;
 	  }
 	};
+
 	var factory = function factory(Ctor) {
-	  return function () {
+	  var fn = function fn() {
 	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
 	      args[_key] = arguments[_key];
 	    }
 
 	    return new (Function.prototype.bind.apply(Ctor, [null].concat(args)))();
 	  };
+
+	  Object.assign(fn, Ctor);
+
+	  return fn;
 	};
 
 	exports.chunk = chunk;
